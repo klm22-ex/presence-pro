@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PrésencePro RDC — gestion professionnelle des présences." />
+  <title>PrésencePro RDC — Gestion des présences</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="landing" id="landingPage">
+    <div class="landing-card">
+      <div class="landing-brand"><div class="brand-mark">P</div><div><strong>PrésencePro</strong><span>RDC</span></div></div>
+      <p class="eyebrow">GESTION DES PRÉSENCES</p>
+      <h1>Bienvenue sur <span>PrésencePro</span></h1>
+      <p class="landing-subtitle">Une plateforme simple pour gérer les présences des agents et piloter votre organisation.</p>
+      <div class="role-grid">
+        <button class="role-card admin-role" type="button" onclick="enterAdmin()">
+          <div class="role-icon">◈</div><div><strong>Administrateur</strong><span>Gérer les employés, présences, rapports et paramètres</span></div><b>→</b>
+        </button>
+        <button class="role-card agent-role" type="button" onclick="enterAgent()">
+          <div class="role-icon">♙</div><div><strong>Agents</strong><span>Scanner le QR, pointer l'arrivée ou le départ et consulter son historique</span></div><b>→</b>
+        </button>
+      </div>
+      <p class="landing-note">🔒 Les données sont sécurisées et synchronisées avec votre espace PrésencePro.</p>
+    </div>
+  </div>
+
+  <div class="app-shell" id="appShell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">P</div>
+        <div>
+          <strong>PrésencePro</strong>
+          <span>RDC</span>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <p class="nav-label">MENU PRINCIPAL</p>
+        <button class="nav-item active" data-section="dashboard"><span>⌂</span> Tableau de bord</button><button class="nav-item" data-section="agentHome"><span>♙</span> Espace agent</button><button class="nav-item" data-section="agentHistory"><span>▤</span> Mon historique</button>
+        <button class="nav-item" data-section="employees"><span>♙</span> Employés</button>
+        <button class="nav-item" data-section="attendance"><span>◷</span> Pointage</button>
+        <button class="nav-item" data-section="kiosk"><span>▣</span> Mode Pointage</button>
+        <button class="nav-item" data-section="biometric"><span>◉</span> Biométrie</button>
+        <button class="nav-item" data-section="history"><span>▤</span> Historique</button>
+        <button class="nav-item" data-section="reports"><span>▥</span> Rapports</button>
+        <button class="nav-item" data-section="leaveRequests"><span>▦</span> Congés & absences</button>
+
+        <p class="nav-label">ADMINISTRATION</p>
+        <button class="nav-item" data-section="settings"><span>⚙</span> Paramètres</button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="upgrade-card">
+          <span class="mini-badge">PRO</span>
+          <h4>Passez au niveau supérieur</h4>
+          <p>Rapports avancés, plusieurs équipes et plus encore.</p>
+          <button onclick="openSubscriptionInfo()">Voir les offres</button>
+        </div>
+        <button class="profile-mini">
+          <div class="avatar">EM</div>
+          <div class="profile-text"><strong>Exauce Mulumba</strong><span>Administrateur</span></div>
+          <span>•••</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu">☰</button><button class="mode-back" id="modeBack" onclick="backToHome()">← Accueil</button>
+        <div class="breadcrumb"><span>PrésencePro</span><b>/</b><strong id="pageTitle">Tableau de bord</strong></div>
+        <div class="top-actions">
+          <button class="icon-btn" id="notificationsButton" title="Notifications" onclick="openNotifications()">♢<i></i><span id="notificationsCount" class="notification-count" hidden>0</span></button>
+          <div class="date-pill" id="currentDate"></div>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="page-section" id="agentHome">
+          <div class="agent-hero">
+            <div><p class="eyebrow">ESPACE AGENT</p><h1>Bonjour <span id="agentGreeting">👋</span></h1><p>Scannez le QR de votre entreprise pour enregistrer votre présence.</p></div>
+            <button class="primary-btn" onclick="navigateTo('kiosk')">📷 Scanner le QR</button>
+          </div>
+          <div class="role-grid agent-actions-grid">
+            <button class="role-card agent-action" onclick="navigateTo('kiosk')"><div class="role-icon">📷</div><div><strong>Pointer ma présence</strong><span>Scanner le QR de l'entreprise puis confirmer votre identité.</span></div><b>→</b></button>
+            <button class="role-card agent-action" onclick="navigateTo('agentHistory')"><div class="role-icon">▤</div><div><strong>Mon historique</strong><span>Consulter mes arrivées, départs et pointages récents.</span></div><b>→</b></button>
+            <button class="role-card agent-action" onclick="openEmployeeAccess()"><div class="role-icon">♙</div><div><strong>Mon compte</strong><span>Se connecter ou associer son profil employé.</span></div><b>→</b></button>
+          </div>
+          <article class="panel agent-summary"><div class="panel-head"><div><h2>Mon dernier pointage</h2><p>Les informations de votre présence apparaîtront ici.</p></div><button class="ghost-btn" onclick="navigateTo('agentHistory')">Voir mon historique →</button></div><div id="agentLastAttendance" class="agent-last">Connectez votre compte employé pour afficher vos pointages.</div></article>
+          <article class="panel agent-leave-panel"><div class="panel-head"><div><h2>Demander un congé</h2><p>Envoyez une demande à votre responsable.</p></div></div><form id="leaveRequestForm" class="leave-form"><label>Type de demande<select id="leaveType"><option value="conge">Congé</option><option value="absence">Absence</option><option value="permission">Permission</option></select></label><label>Du<input type="date" id="leaveStart" required></label><label>Au<input type="date" id="leaveEnd" required></label><label>Motif<textarea id="leaveReason" rows="2" maxlength="500" required placeholder="Expliquez brièvement votre demande"></textarea></label><button class="primary-btn" type="submit">Envoyer la demande</button></form><div id="myLeaveRequests" class="leave-list"></div></article>
+        </section>
+
+        <section class="page-section active" id="dashboard">
+          <div class="hero">
+            <div>
+              <p class="eyebrow">MERCREDI 07 OCTOBRE 2026</p>
+              <h1>Bonjour, Exauce <span>👋</span></h1>
+              <p>Voici ce qui se passe aujourd'hui dans votre organisation.</p>
+            </div>
+            <button class="primary-btn" onclick="navigateTo('attendance')"><span>＋</span> Nouveau pointage</button>
+          </div>
+
+          <div class="stats-grid">
+            <article class="stat-card">
+              <div class="stat-icon blue">♙</div>
+              <div><span>Total employés</span><strong id="totalEmployees">24</strong><small>+3 ce mois</small></div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-icon green">✓</div>
+              <div><span>Présents aujourd'hui</span><strong id="presentCount">18</strong><small class="positive">75% de l'effectif</small></div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-icon orange">◷</div>
+              <div><span>En retard</span><strong id="lateCount">2</strong><small>8,3% de l'effectif</small></div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-icon red">!</div>
+              <div><span>Absents</span><strong id="absentCount">4</strong><small>À vérifier aujourd'hui</small></div>
+            </article>
+          </div>
+
+          <div class="dashboard-grid">
+            <article class="panel attendance-overview">
+              <div class="panel-head">
+                <div><h2>Présences du jour</h2><p>Suivi en temps réel de votre équipe</p></div>
+                <button class="ghost-btn" onclick="navigateTo('history')">Voir tout →</button>
+              </div>
+              <div class="progress-wrap">
+                <div class="progress-ring" id="progressRing"><div><strong>75%</strong><span>présents</span></div></div>
+                <div class="legend">
+                  <div><span class="dot present"></span><div><strong>18</strong><small>Présents</small></div></div>
+                  <div><span class="dot late"></span><div><strong>2</strong><small>En retard</small></div></div>
+                  <div><span class="dot absent"></span><div><strong>4</strong><small>Absents</small></div></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel quick-panel">
+              <div class="panel-head"><div><h2>Actions rapides</h2><p>Les tâches les plus utilisées</p></div></div>
+              <div class="quick-actions">
+                <button onclick="navigateTo('employees')"><span>＋</span><div><strong>Ajouter un employé</strong><small>Créer un nouveau profil</small></div>→</button>
+                <button onclick="navigateTo('attendance')"><span>◷</span><div><strong>Enregistrer un pointage</strong><small>Arrivée ou départ</small></div>→</button>
+                <button onclick="navigateTo('reports')"><span>▥</span><div><strong>Générer un rapport</strong><small>Exporter les données</small></div>→</button>
+              </div>
+            </article>
+          </div>
+
+          <article class="panel recent-panel">
+            <div class="panel-head">
+              <div><h2>Derniers pointages</h2><p>Activité récente de votre organisation</p></div>
+              <button class="ghost-btn" onclick="navigateTo('history')">Historique complet →</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Employé</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr></thead>
+                <tbody id="recentTable"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="page-section" id="employees">
+          <div class="section-heading"><div><p class="eyebrow">GESTION DU PERSONNEL</p><h1>Employés</h1><p>Gérez les membres de votre organisation.</p></div><button class="primary-btn" id="addEmployeeBtn">＋ Ajouter un employé</button></div>
+          <article class="panel">
+            <div class="toolbar"><div class="search"><span>⌕</span><input id="employeeSearch" placeholder="Rechercher un nom ou matricule..." /></div><select id="employeeFilter"><option value="all">Tous les statuts</option><option value="present">Présent</option><option value="late">En retard</option><option value="absent">Absent</option></select></div>
+            <div class="table-wrap"><table><thead><tr><th>Employé</th><th>Matricule</th><th>Département</th><th>Biométrie</th><th>Statut</th><th>Dernier pointage</th><th></th></tr></thead><tbody id="employeeTable"></tbody></table></div>
+          </article>
+        </section>
+
+        <section class="page-section" id="attendance">
+          <div class="section-heading"><div><p class="eyebrow">POINTAGE</p><h1>Enregistrer une présence</h1><p>Enregistrez rapidement une arrivée ou un départ.</p></div></div>
+          <div class="attendance-card">
+            <div class="clock" id="liveClock">08:00:00</div>
+            <p class="today-label" id="attendanceDate"></p>
+            <div class="attendance-form"><label>Identifiant employé<input id="attendanceCode" placeholder="Ex. EMP001" autocomplete="off"></label><div class="attendance-buttons"><button class="check-btn arrival" onclick="recordAttendance('arrival')">✓ Enregistrer l'arrivée</button><button class="check-btn departure" onclick="recordAttendance('departure')">→ Enregistrer le départ</button></div></div>
+            <div class="secure-note">🔒 Chaque pointage est enregistré avec la date et l'heure.</div>
+          </div>
+        </section>
+
+        <section class="page-section" id="kiosk">
+          <div class="section-heading"><div><p class="eyebrow">MODE EMPLOYÉ</p><h1>Pointage par QR Code</h1><p>Le QR identifie l’entreprise. Le compte connecté sur le téléphone identifie l’employé.</p></div></div>
+          <div class="kiosk-grid">
+            <article class="panel kiosk-main">
+              <div class="qr-step"><span>1</span><div><strong>Scanner le QR de l’entreprise</strong><small>Le QR ne contient pas l’identité de l’employé.</small></div></div>
+              <div id="qrReader" class="qr-reader"><div class="qr-placeholder">📷<strong>Scanner le QR</strong><small>La caméra sera utilisée uniquement pendant le scan.</small></div></div>
+              <button class="primary-btn full" id="startQrBtn" onclick="startQrScan()">📷 Scanner le QR de l’entreprise</button>
+              <div class="kiosk-result" id="kioskResult">
+                <span class="kiosk-icon">🔐</span><div><strong>Identification de l’employé</strong><small>Après le scan, PrésencePro utilisera le compte connecté sur ce téléphone.</small></div>
+              </div>
+            </article>
+            <article class="panel">
+              <div class="panel-head"><div><h2>Votre identité</h2><p>Le téléphone doit être associé au compte de l’employé.</p></div></div>
+              <div class="identity-card" id="employeeIdentity"><div class="person-avatar">?</div><div><strong>Non connecté</strong><small>Connectez le compte employé</small></div></div>
+              <button class="secondary-btn full" onclick="openEmployeeAccess()">🔑 Accès employé</button>
+              <button class="ghost-btn full" onclick="verifyEmployeeBiometric()">👆 Vérifier mon appareil</button>
+              <div class="secure-note">🔒 Le QR identifie le lieu. Le compte + l’authentification du téléphone identifient la personne.<button class="ghost-btn full" onclick="claimEmployeeAccount()">🔗 Associer ce téléphone à mon profil</button>
+            </article>
+          </div>
+          <article class="panel kiosk-admin-card"><div><p class="eyebrow">ADMINISTRATEUR</p><h2>QR de votre entreprise</h2><p>Générez le QR à afficher à l’entrée de l’entreprise.</p></div><div id="companyQr" class="company-qr"><span>QR</span></div><button class="ghost-btn" onclick="showCompanyQr()">Générer / actualiser le QR</button></article>
+        </section>
+
+        <section class="page-section" id="biometric">
+          <div class="section-heading"><div><p class="eyebrow">IDENTITÉ BIOMÉTRIQUE</p><h1>Pointage par empreinte</h1><p>Associez une empreinte à chaque agent et vérifiez son identité avant le pointage.</p></div></div>
+          <div class="bio-layout">
+            <article class="panel fingerprint-panel">
+              <div class="fingerprint-visual"><div class="fingerprint-icon">⌁</div><span id="fingerprintState">PRÊT À VÉRIFIER</span></div>
+              <h2>Biométrie de la tablette</h2>
+              <p class="muted">PrésencePro utilise la sécurité biométrique native de la tablette ou du téléphone : empreinte digitale, Face ID ou autre authentificateur compatible.</p>
+              <div class="device-status"><span class="status-dot" id="deviceDot"></span><div><strong id="deviceStatus">Vérification de l’appareil…</strong><small id="deviceStatusSmall">WebAuthn / authentification native</small></div></div>
+              <button class="primary-btn full" id="verifyBiometricBtn" onclick="verifyBiometric()">👆 S’identifier par biométrie</button>
+              <p class="security-note">🔐 PrésencePro ne reçoit pas l’empreinte de l’agent. Le système de la tablette effectue la vérification et renvoie une preuve cryptographique.</p>
+            </article>
+            <article class="panel biometric-list">
+              <div class="panel-head"><div><h2>Profils des agents</h2><p>Chaque agent possède une photo et peut enregistrer la biométrie de son appareil.</p></div></div>
+              <div class="bio-enroll-box">
+                <label for="biometricEmployee">Agent à enregistrer</label>
+                <select id="biometricEmployee"></select>
+                <button class="secondary-btn full" onclick="registerBiometric()">＋ Enregistrer cet appareil</button>
+                <small>À faire une fois par appareil de pointage et par agent.</small>
+              </div>
+              <div id="biometricTable"></div>
+            </article>
+          </div>
+
+          <article class="panel kiosk-panel">
+            <div><p class="eyebrow">MODE BORNE</p><h2>Pointage rapide sur tablette</h2><p>Une tablette peut rester ouverte sur cet écran. L’agent appuie sur le bouton, utilise la biométrie de la tablette et son profil est identifié.</p></div>
+            <button class="primary-btn" onclick="verifyBiometric()">👆 Pointer ma présence</button>
+          </article>
+        </section>
+
+        <section class="page-section" id="agentHistory">
+          <div class="section-heading"><div><p class="eyebrow">ESPACE AGENT</p><h1>Mon historique</h1><p>Consultez uniquement vos propres pointages.</p></div><button class="ghost-btn" onclick="navigateTo('kiosk')">📷 Nouveau pointage</button></div>
+          <article class="panel"><div class="table-wrap"><table><thead><tr><th>Date</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr></thead><tbody id="agentHistoryTable"></tbody></table></div></article>
+        </section>
+
+        <section class="page-section" id="history">
+          <div class="section-heading"><div><p class="eyebrow">SUIVI</p><h1>Historique des présences</h1><p>Consultez les pointages enregistrés.</p></div><button class="ghost-btn" onclick="downloadCSV()">Exporter CSV</button></div>
+          <article class="panel"><div class="toolbar"><div class="search"><span>⌕</span><input id="historySearch" placeholder="Rechercher un employé..." /></div><input class="date-input" type="date" id="historyDate"></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Employé</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr></thead><tbody id="historyTable"></tbody></table></div></article>
+        </section>
+
+        <section class="page-section" id="reports">
+          <div class="section-heading"><div><p class="eyebrow">ANALYSE</p><h1>Rapports</h1><p>Une vision claire de la présence de votre équipe.</p></div></div>
+          <article class="panel report-filters"><div class="toolbar"><label>Du <input class="date-input" id="reportFrom" type="date"></label><label>Au <input class="date-input" id="reportTo" type="date"></label><label>Département <select id="reportDepartment"><option value="all">Tous les départements</option><option>Administration</option><option>Finance</option><option>Ressources humaines</option><option>Informatique</option><option>Enseignement</option><option>Autre</option></select></label><button class="primary-btn" onclick="downloadCSV()">Exporter CSV / Excel</button><button class="ghost-btn" onclick="printReport()">Imprimer / PDF</button></div></article>
+          <div class="report-grid"><article class="panel report-card"><span>TAUX DE PRÉSENCE</span><strong id="reportPresenceRate">0%</strong><small>Sur les lignes filtrées</small></article><article class="panel report-card"><span>TAUX DE RETARD</span><strong id="reportLateRate">0%</strong><small>Selon l’heure de début configurée</small></article><article class="panel report-card"><span>POINTAGES</span><strong id="reportRecordCount">0</strong><small>Enregistrements filtrés</small></article></div>
+          <article class="panel"><div class="panel-head"><div><h2>Détail du rapport</h2><p>Les données affichées correspondent aux filtres choisis.</p></div></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Employé</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr></thead><tbody id="reportTable"></tbody></table></div></article>
+          <p class="security-note">Les exports contiennent les données actuellement chargées par l’application. Pour un rapport exhaustif sur une longue période, les archives serveur devront être paginées.</p>
+        </section>
+
+        <section class="page-section" id="leaveRequests">
+          <div class="section-heading"><div><p class="eyebrow">RESSOURCES HUMAINES</p><h1>Congés & absences</h1><p>Examinez les demandes envoyées par les employés.</p></div><button class="ghost-btn" onclick="loadLeaveRequests()">Actualiser</button></div>
+          <article class="panel"><div class="table-wrap"><table><thead><tr><th>Employé</th><th>Type</th><th>Période</th><th>Motif</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="leaveRequestsTable"><tr><td colspan="6" style="text-align:center;padding:24px">Connectez Supabase et actualisez les demandes.</td></tr></tbody></table></div></article>
+          <p class="security-note">Les demandes de congé ne modifient pas automatiquement le statut de présence. La validation reste une décision du responsable.</p>
+        </section>
+
+        <section class="page-section" id="settings">
+          <div class="section-heading"><div><p class="eyebrow">CONFIGURATION</p><h1>Paramètres</h1><p>Personnalisez votre espace PrésencePro.</p></div></div>
+          <article class="panel settings-list">
+            <div><div><strong>Organisation</strong><span id="settingsOrganizationLabel">PrésencePro</span></div><button class="ghost-btn" type="button" data-settings-open="organization">Modifier</button></div>
+            <div><div><strong>Horaires de travail</strong><span id="settingsHoursLabel">08:00 — 16:00</span></div><button class="ghost-btn" type="button" data-settings-open="hours">Configurer</button></div>
+            <div><div><strong>Abonnement</strong><span class="plan-badge">VERSION DÉMO</span></div><button class="ghost-btn" type="button" onclick="openSubscriptionInfo()">Gérer</button></div>
+          </article>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="subscriptionModal" role="dialog" aria-modal="true" aria-labelledby="subscriptionTitle"><div class="modal subscription-modal"><button class="modal-close" type="button" onclick="closeSubscriptionInfo()">×</button><p class="eyebrow">OFFRES PRÉSENCEPRO</p><h2 id="subscriptionTitle">Choisissez votre formule</h2><p class="modal-subtitle">Les formules sont présentées à titre de préparation. Aucun paiement n’est activé dans cette version.</p><div class="subscription-grid"><article><span>GRATUIT</span><h3>Découverte</h3><p>Pour tester l’application avec une petite équipe.</p><ul><li>Jusqu’à 5 employés</li><li>Pointage et historique</li><li>Tableau de bord de base</li></ul><button class="ghost-btn" onclick="showToast('Vous utilisez déjà le mode de démonstration.')">Formule actuelle</button></article><article class="featured"><span>PRO</span><h3>Équipe</h3><p>Pour les petites et moyennes organisations.</p><ul><li>Jusqu’à 50 employés</li><li>Rapports et exports</li><li>Demandes de congé</li></ul><button class="primary-btn" onclick="showToast('Les tarifs et paiements seront activés après validation du service.')">Bientôt disponible</button></article><article><span>BUSINESS</span><h3>Organisation</h3><p>Pour les équipes plus grandes.</p><ul><li>Plus de 50 employés</li><li>Plusieurs responsables</li><li>Paramètres partagés</li></ul><button class="ghost-btn" onclick="showToast('Contact commercial à mettre en place.')">Bientôt disponible</button></article></div><p class="settings-help">Les prix, Mobile Money et l’activation automatique des abonnements restent à intégrer après choix d’un prestataire de paiement.</p></div></div>
+
+  <div class="modal-overlay" id="employeeModal">
+    <div class="modal">
+      <button class="modal-close" id="closeModal">×</button>
+      <p class="eyebrow">NOUVEAU PROFIL</p><h2>Ajouter un employé</h2><p class="modal-subtitle">Créez un profil pour commencer à suivre ses présences.</p>
+      <form id="employeeForm"><label>Photo de l’agent<input id="newPhoto" type="file" accept="image/*" required></label><div class="photo-preview" id="photoPreview"><span>Aperçu photo</span></div><label>Nom complet<input id="newName" required placeholder="Ex. Jean Mukendi"></label><label>Matricule<input id="newCode" required placeholder="Ex. EMP025"></label><label>Département<select id="newDepartment"><option>Administration</option><option>Finance</option><option>Ressources humaines</option><option>Informatique</option><option>Enseignement</option><option>Autre</option></select></label><button class="primary-btn full" type="submit">Créer le profil</button></form>
+    </div>
+  </div>
+
+
+
+  <div class="modal-overlay" id="employeeDetailsModal" role="dialog" aria-modal="true" aria-labelledby="employeeDetailsTitle">
+    <div class="modal employee-details-modal">
+      <button class="modal-close" id="closeEmployeeDetails" type="button" aria-label="Fermer">×</button>
+      <p class="eyebrow">DOSSIER EMPLOYÉ</p><h2 id="employeeDetailsTitle">Informations de l’employé</h2>
+      <div id="employeeDetailsBody"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+    <div class="modal settings-modal">
+      <button class="modal-close" id="closeSettingsModal" type="button" aria-label="Fermer">×</button>
+      <p class="eyebrow">CONFIGURATION</p><h2 id="settingsModalTitle">Paramètres de PrésencePro</h2>
+      <div class="settings-modal-tabs"><button type="button" data-settings-tab="organization" class="active">Organisation</button><button type="button" data-settings-tab="hours">Horaires</button></div>
+      <form id="settingsOrganizationForm" data-settings-panel="organization">
+        <label>Nom de l’organisation<input id="settingsOrganizationName" required maxlength="120" placeholder="Ex. Université / Entreprise"></label>
+        <p class="settings-help">Le nom sera synchronisé avec Supabase lorsque les droits de votre compte le permettent.</p>
+        <button class="primary-btn full" type="submit">Enregistrer le nom</button>
+      </form>
+      <form id="settingsHoursForm" data-settings-panel="hours" hidden>
+        <label>Heure de début<input id="settingsStartTime" type="time" required value="08:00"></label>
+        <label>Heure de fin<input id="settingsEndTime" type="time" required value="16:00"></label>
+        <p class="settings-help">Ces horaires sont actuellement enregistrés sur cet appareil. La synchronisation entre plusieurs appareils sera ajoutée avec les paramètres partagés côté serveur.</p>
+        <button class="primary-btn full" type="submit">Enregistrer les horaires</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="employeeAccessModal">
+    <div class="modal auth-modal">
+      <button class="modal-close" type="button" onclick="closeEmployeeAccess()">×</button>
+      <p class="eyebrow">ESPACE EMPLOYÉ</p>
+      <h2>Accéder à mon pointage</h2>
+      <p class="modal-subtitle">Créez ou connectez votre compte, puis associez-le à votre matricule avec le code fourni par l’administrateur.</p>
+      <form id="employeeAccessForm">
+        <label>Nom complet <input id="employeeAccessName" placeholder="Ex. Kayowa Mulumba"></label>
+        <label>Email <input id="employeeAccessEmail" type="email" required placeholder="vous@entreprise.com"></label>
+        <label>Mot de passe <input id="employeeAccessPassword" type="password" required minlength="6" placeholder="••••••••"></label>
+        <label>Code d’association <input id="employeeAccessCode" placeholder="Ex. PP-319CC2AB"></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button class="primary-btn" type="submit" data-mode="login">Se connecter</button>
+          <button class="ghost-btn" type="button" id="employeeCreateBtn">Créer mon compte</button>
+        </div>
+      </form>
+      <p id="employeeAccessStatus" class="security-note"></p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="modal-overlay" id="authModal">
+    <div class="modal auth-modal">
+      <p class="eyebrow">ESPACE SÉCURISÉ</p><h2 id="authTitle">Connexion</h2>
+      <p class="modal-subtitle">Connectez votre espace PrésencePro à Supabase.</p>
+      <form id="authForm">
+        <div id="signupFields" style="display:none">
+          <label>Nom complet<input id="authFullName" placeholder="Ex. Exauce Mulumba"></label>
+          <label>Organisation<input id="authOrgName" placeholder="Ex. Entreprise Exemple"></label>
+        </div>
+        <label>Email<input id="authEmail" type="email" required placeholder="vous@entreprise.com"></label>
+        <label>Mot de passe<input id="authPassword" type="password" required minlength="6" placeholder="••••••••"></label>
+        <button class="primary-btn full" id="authSubmit" type="submit">Se connecter</button>
+      </form>
+      <button class="ghost-btn full" id="authToggle" type="button">Créer un compte</button>
+      <p id="authStatus" class="security-note"></p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
