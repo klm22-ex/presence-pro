@@ -197,11 +197,10 @@
               <div class="panel-head"><div><h2>Votre identité</h2><p>Le téléphone doit être associé au compte de l’employé.</p></div></div>
               <div class="identity-card" id="employeeIdentity"><div class="person-avatar">?</div><div><strong>Non connecté</strong><small>Connectez le compte employé</small></div></div>
               <button class="secondary-btn full" onclick="openEmployeeAccess()">🔑 Accès employé</button>
-              <button class="ghost-btn full" onclick="verifyEmployeeBiometric()">👆 Vérifier mon appareil</button>
-              <div class="secure-note">🔒 Le QR identifie le lieu. Le compte + l’authentification du téléphone identifient la personne.<button class="ghost-btn full" onclick="claimEmployeeAccount()">🔗 Associer ce téléphone à mon profil</button>
+              <div class="secure-note">🔒 Le compte personnel identifie l’agent. Le QR quotidien confirme sa présence sur le site.<button class="ghost-btn full" onclick="claimEmployeeAccount()">🔗 Associer ce téléphone à mon profil</button>
             </article>
           </div>
-          <article class="panel kiosk-admin-card"><div><p class="eyebrow">ADMINISTRATEUR</p><h2>QR de votre entreprise</h2><p>Générez le QR à afficher à l’entrée de l’entreprise.</p></div><div id="companyQr" class="company-qr"><span>QR</span></div><button class="ghost-btn" onclick="showCompanyQr()">Générer / actualiser le QR</button></article>
+          <article class="panel kiosk-admin-card"><div><p class="eyebrow">ADMINISTRATEUR</p><h2>QR quotidien de votre entreprise</h2><p>Ce QR est créé automatiquement pour la journée et expire à minuit (heure de Kinshasa).</p></div><div id="companyQr" class="company-qr"><span>QR du jour</span></div><button class="ghost-btn" onclick="showCompanyQr()">Afficher le QR du jour</button></article>
         </section>
 
         <section class="page-section" id="biometric">
