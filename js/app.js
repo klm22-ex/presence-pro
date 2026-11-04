@@ -690,11 +690,24 @@ function employeeSignIn(){
   }).catch(e=>showToast('Connexion employé impossible : '+(e.message||'erreur')));
 }
 async function loadEmployeeIdentity(){
-  if(!ppSupabase||!employeePortalUser)return;
-  const {data,error}=await ppSupabase.from('employees').select('id,full_name,code,department,photo_path').eq('auth_user_id',employeePortalUser.id).maybeSingle();
-  const box=document.getElementById('employeeIdentity');
-  if(error||!data){if(box)box.innerHTML='<div class="person-avatar">?</div><div><strong>Compte non associé</strong><small>Demandez à l’administrateur d’associer votre compte à votre matricule.</small></div>';return;}
-  if(box)box.innerHTML=`<div class="person-avatar">${data.full_name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase()}</div><div><strong>${data.full_name}</strong><small>${data.code} • ${data.department||'Employé'}</small></div>`;
+  const box=document.getElementById('employeeIdentity'),profile=document.getElementById('agentProfileCard'),greeting=document.getElementById('agentGreeting');
+  if(!ppSupabase||!employeePortalUser){
+    if(box)box.innerHTML='<div class="person-avatar">?</div><div><strong>Non connecté</strong><small>Connectez votre compte employé.</small></div>';
+    if(profile)profile.innerHTML='<div class="agent-profile-empty">Connectez votre compte employé pour consulter votre profil.</div>';
+    if(greeting)greeting.textContent='👋';return;
+  }
+  const {data,error}=await ppSupabase.from('employees').select('id,full_name,code,department,photo_path,active').eq('auth_user_id',employeePortalUser.id).maybeSingle();
+  if(error||!data){
+    if(box)box.innerHTML='<div class="person-avatar">?</div><div><strong>Compte non associé</strong><small>Demandez à l’administrateur d’associer votre matricule.</small></div>';
+    if(profile)profile.innerHTML='<div class="agent-profile-empty">Aucun profil employé n’est associé à ce compte.</div>';return;
+  }
+  const name=escapeHTML(data.full_name||'Employé'),initials=(data.full_name||'E').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+  let photoUrl='';if(data.photo_path){try{const {data:photo}=await ppSupabase.storage.from('employee-photos').createSignedUrl(data.photo_path,3600);photoUrl=photo?.signedUrl||'';}catch{}}
+  const avatar=photoUrl?'<img src="'+escapeHTML(photoUrl)+'" alt="Photo de profil de '+name+'">':'<span>'+escapeHTML(initials)+'</span>';
+  const code=escapeHTML(data.code||'Non renseigné'),department=escapeHTML(data.department||'Non renseigné'),status=data.active===false?'Inactif':'Actif';
+  if(box)box.innerHTML='<div class="person-avatar">'+avatar+'</div><div><strong>'+name+'</strong><small>'+code+' • '+department+'</small></div>';
+  if(profile)profile.innerHTML='<div class="agent-profile-main"><div class="agent-profile-photo">'+avatar+'</div><div class="agent-profile-name"><strong>'+name+'</strong><span>'+code+'</span></div><span class="agent-status '+(data.active===false?'inactive':'')+'">'+status+'</span></div><div class="agent-profile-details"><div><small>Département</small><strong>'+department+'</strong></div><div><small>Compte</small><strong>Associé à ce téléphone</strong></div></div>';
+  if(greeting)greeting.textContent=(data.full_name||'').trim().split(/\s+/)[0]||'👋';
 }
 async function claimEmployeeAccount(){
   if(!ppHasSupabase()){showToast('Supabase doit être connecté.');return;}
