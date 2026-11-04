@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261104-profile6" />
+  <link rel="stylesheet" href="css/style.css?v=20261104-agentlogout7" />
 </head>
 <body>
   <div class="landing" id="landingPage">
@@ -86,8 +86,8 @@
             <div><p class="eyebrow">ESPACE AGENT</p><h1>Bonjour <span id="agentGreeting">👋</span></h1><p>Scannez le QR de votre entreprise pour enregistrer votre présence.</p></div>
             <button class="primary-btn" onclick="navigateTo('kiosk')">📷 Scanner le QR</button>
           </div>
-          <article class="panel agent-profile-panel"><div class="panel-head"><div><h2>Mon profil</h2><p>Vos informations employé enregistrées dans l’entreprise.</p></div><span class="profile-lock">🔒 Personnel</span></div><div id="agentProfileCard" class="agent-profile-card"><div class="agent-profile-empty">Connectez votre compte employé pour consulter votre profil.</div></div></article>
-          <div class="role-grid agent-actions-grid">
+          <article class="panel agent-profile-panel"><div class="panel-head"><div><h2>Mon profil</h2><p>Vos informations employé enregistrées dans l’entreprise.</p></div><span class="profile-lock">🔒 Personnel</span></div><div id="agentProfileCard" class="agent-profile-card"><div class="agent-profile-empty">Connectez votre compte employé pour consulter votre profil.</div></div><div class="agent-profile-footer"><span>Gardez votre compte personnel confidentiel.</span><button class="ghost-btn" type="button" onclick="agentSignOut()">↪ Se déconnecter</button></div></article>
+          <div class="role-grid agent-actions-grid"
             <button class="role-card agent-action" onclick="navigateTo('kiosk')"><div class="role-icon">📷</div><div><strong>Pointer ma présence</strong><span>Scanner le QR de l'entreprise puis confirmer votre identité.</span></div><b>→</b></button>
             <button class="role-card agent-action" onclick="navigateTo('agentHistory')"><div class="role-icon">▤</div><div><strong>Mon historique</strong><span>Consulter mes arrivées, départs et pointages récents.</span></div><b>→</b></button>
             <button class="role-card agent-action" onclick="openEmployeeAccess()"><div class="role-icon">♙</div><div><strong>Mon compte</strong><span>Se connecter ou associer son profil employé.</span></div><b>→</b></button>
@@ -351,6 +351,6 @@
   <script src="js/supabase-config.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="js/app.js?v=20261104-profile6"></script>
+  <script src="js/app.js?v=20261104-agentlogout7"></script>
 </body>
 </html>
