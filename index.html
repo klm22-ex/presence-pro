@@ -168,7 +168,7 @@
         <section class="page-section" id="employees">
           <div class="section-heading"><div><p class="eyebrow">GESTION DU PERSONNEL</p><h1>Employés</h1><p>Gérez les membres de votre organisation.</p></div><button class="primary-btn" id="addEmployeeBtn">＋ Ajouter un employé</button></div>
           <article class="panel">
-            <div class="toolbar"><div class="search"><span>⌕</span><input id="employeeSearch" placeholder="Rechercher un nom ou matricule..." /></div><select id="employeeFilter"><option value="all">Tous les statuts</option><option value="present">Présent</option><option value="late">En retard</option><option value="absent">Absent</option></select></div>
+            <div class="toolbar"><div class="search"><span>⌕</span><input id="employeeSearch" placeholder="Rechercher un nom ou matricule..." /></div><select id="employeeFilter"><option value="all">Tous les statuts</option><option value="present">Présent</option><option value="late">En retard</option><option value="absent">Absent</option></select><select id="employeeAccountFilter" aria-label="Filtrer par association de compte"><option value="all">Tous les comptes</option><option value="linked">Compte associé</option><option value="unlinked">À associer</option></select></div>
             <div class="table-wrap"><table><thead><tr><th>Employé</th><th>Matricule</th><th>Département</th><th>Compte agent</th><th>Statut</th><th>Dernier pointage</th><th></th></tr></thead><tbody id="employeeTable"></tbody></table></div>
           </article>
         </section>
@@ -351,6 +351,6 @@
   <script src="js/supabase-config.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="js/app.js?v=20261104-accountstatus8"></script>
+  <script src="js/app.js?v=20261104-accountfilter9"></script>
 </body>
 </html>
