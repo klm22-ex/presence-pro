@@ -186,6 +186,21 @@ function enterAgent(){
   loadEmployeeIdentity();
   loadAgentHistory();loadMyLeaveRequests();
 }
+async function agentSignOut(){
+  if(!ppSupabase||!employeePortalUser){backToHome();return;}
+  if(!confirm('Voulez-vous vraiment déconnecter ce compte employé de ce téléphone ?'))return;
+  try{
+    const {error}=await ppSupabase.auth.signOut();
+    if(error)throw error;
+    ppSession=null;employeePortalUser=null;
+    const profile=document.getElementById('agentProfileCard'),identity=document.getElementById('employeeIdentity'),greeting=document.getElementById('agentGreeting');
+    if(profile)profile.innerHTML='<div class="agent-profile-empty">Vous êtes déconnecté. Connectez-vous pour consulter votre profil.</div>';
+    if(identity)identity.innerHTML='<div class="person-avatar">?</div><div><strong>Non connecté</strong><small>Connectez votre compte employé.</small></div>';
+    if(greeting)greeting.textContent='👋';
+    showToast('Compte employé déconnecté.');
+    backToHome();
+  }catch(e){showToast('Déconnexion impossible : '+(e.message||'erreur'));}
+}
 function backToHome(){
   const landing=document.getElementById('landingPage'), shell=document.getElementById('appShell');
   if(shell){shell.classList.remove('mode-admin','mode-agent');shell.style.display='none';}
