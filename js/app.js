@@ -294,6 +294,7 @@ function printReport(){const rows=reportRows();if(!rows.length){showToast('Aucun
 function updateDate(){
   const now=new Date();
   document.getElementById("currentDate").textContent=now.toLocaleDateString("fr-FR",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
+  const dashboardDate=document.getElementById("dashboardDate");if(dashboardDate)dashboardDate.textContent=now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).toUpperCase();
   document.getElementById("attendanceDate").textContent=now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
 }
 function updateClock(){
