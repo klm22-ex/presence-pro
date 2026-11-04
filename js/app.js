@@ -107,14 +107,14 @@ async function ppLoadBiometricCredentials(){
   if(error)throw error;
   for(const e of employees){const row=(data||[]).find(x=>x.employee_id===e.supabaseId||x.employee_id===e.id);e.nativeBiometric=!!row;e.biometricId=row?.credential_id||null;}
 }
-async function ppInit(){
+async async function ppInit(){
   if(!ppHasSupabase()){ppSetDemoIdentity();return;}
   const {data}=await ppSupabase.auth.getSession();ppSession=data.session;employeePortalUser=data.session?.user||null;
   ppSupabase.auth.onAuthStateChange((_event,session)=>{ppSession=session;employeePortalUser=session?.user||null;if(session){ppAuthModal(false);ppBootCloud();}else if(document.getElementById('appShell')?.classList.contains('mode-admin'))ppAuthModal(true);});
   if(!ppSession){return;}
   await ppBootCloud();
 }
-async function ppBootCloud(){
+async async function ppBootCloud(){
   try{await ppLoadOrganization();await ppLoadEmployees();await ppLoadBiometricCredentials();await ppLoadOrganizationSettings();await loadLeaveRequests();renderBiometric();}
   catch(err){console.error(err);showToast('Connexion Supabase : '+(err.message||'erreur'));}
 }
@@ -363,7 +363,7 @@ document.getElementById('historyDate')?.addEventListener('change',renderHistory)
 document.getElementById('reportFrom')?.addEventListener('change',renderReports);document.getElementById('reportTo')?.addEventListener('change',renderReports);document.getElementById('reportDepartment')?.addEventListener('change',renderReports);
 
 // Demandes de congé et d’absence (nécessite la migration SQL V15).
-async function submitLeaveRequest(event){
+async async function submitLeaveRequest(event){
   event.preventDefault();
   if(!ppSupabase||!ppSession){showToast('Connectez votre compte employé pour envoyer une demande.');return;}
   const start=document.getElementById('leaveStart').value,end=document.getElementById('leaveEnd').value,reason=document.getElementById('leaveReason').value.trim(),type=document.getElementById('leaveType').value;
@@ -373,7 +373,7 @@ async function submitLeaveRequest(event){
     document.getElementById('leaveRequestForm').reset();showToast('Demande envoyée au responsable.');await loadMyLeaveRequests();await loadLeaveRequests();
   }catch(err){showToast('Demande impossible : '+(err.message||'vérifiez la configuration SQL V15.'));}
 }
-async function loadMyLeaveRequests(){
+async async function loadMyLeaveRequests(){
   const box=document.getElementById('myLeaveRequests');if(!box)return;
   if(!ppSupabase||!ppSession){box.innerHTML='<p class="settings-help">Connectez votre compte employé pour voir vos demandes.</p>';return;}
   try{const {data:emp,error:empErr}=await ppSupabase.from('employees').select('id').eq('auth_user_id',ppSession.user.id).maybeSingle();if(empErr)throw empErr;if(!emp){box.innerHTML='<p class="settings-help">Votre compte n’est pas encore associé à un employé.</p>';return;}
@@ -381,7 +381,7 @@ async function loadMyLeaveRequests(){
     box.innerHTML=(data||[]).map(r=>`<div class="leave-item"><div><strong>${escapeHTML(r.request_type)}</strong><small>${escapeHTML(r.start_date)} → ${escapeHTML(r.end_date)}</small><small>${escapeHTML(r.reason)}</small></div><span class="leave-status ${escapeHTML(r.status)}">${r.status==='pending'?'En attente':r.status==='approved'?'Approuvée':'Refusée'}</span></div>`).join('')||'<p class="settings-help">Aucune demande pour le moment.</p>';
   }catch(err){box.innerHTML='<p class="settings-help">La fonction congés nécessite la migration SQL V15.</p>';}
 }
-async function loadLeaveRequests(){
+async async function loadLeaveRequests(){
   const body=document.getElementById('leaveRequestsTable');if(!body)return;
   if(!ppSupabase||!ppSession||!ppOrganizationId){body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px">Connectez-vous à un compte administrateur relié à une organisation.</td></tr>';return;}
   try{const {data,error}=await ppSupabase.from('leave_requests').select('id,employee_id,request_type,start_date,end_date,reason,status,created_at').order('created_at',{ascending:false}).limit(100);if(error)throw error;const pendingCount=(data||[]).filter(r=>r.status==='pending').length;const nc=document.getElementById('notificationsCount');if(nc){nc.textContent=pendingCount;nc.hidden=pendingCount===0;}
@@ -489,7 +489,7 @@ function refreshBioFlags(){
 }
 function credentialIdForEmployee(id){return loadBioStore()[id]||null;}
 
-async function registerBiometric(){
+async async function registerBiometric(){
   const id=document.getElementById("biometricEmployee")?.value;const emp=employees.find(e=>String(e.id)===String(id));if(!emp)return;
   if(!webauthnReady()){showToast("La biométrie nécessite HTTPS et une tablette/téléphone compatible.");return;}
   try{
@@ -508,7 +508,7 @@ async function registerBiometric(){
   }
 }
 
-async function verifyBiometric(){
+async async function verifyBiometric(){
   if(!webauthnReady()){showToast("La biométrie native nécessite HTTPS et un appareil compatible.");return;}
   try{
     const assertion=await navigator.credentials.get({publicKey:{challenge:randomBytes(32),rpId:location.hostname,userVerification:"required",timeout:60000}});
@@ -678,7 +678,7 @@ async function claimEmployeeAccount(){
   }catch(e){showToast('Association impossible : '+(e.message||'code invalide ou déjà utilisé'));}
 }
 
-async function startQrScan(){
+async async function startQrScan(){
   if(typeof Html5Qrcode==='undefined'){showToast('Le module de scan QR n’est pas chargé.');return;}
   const el=document.getElementById('qrReader');
   if(qrScanner){try{await qrScanner.stop();}catch{} qrScanner=null;}
@@ -690,7 +690,7 @@ async function startQrScan(){
     });
   }catch(e){showToast('Impossible d’ouvrir la caméra. Vérifiez l’autorisation caméra et utilisez HTTPS.');}
 }
-async function handleCompanyQr(text){
+async async function handleCompanyQr(text){
   let payload;try{payload=JSON.parse(text);}catch{showToast('QR PrésencePro non reconnu.');return;}
   if(payload.type!=='presencepro-company'||!payload.organization_id){showToast('Ce QR n’est pas un QR PrésencePro valide.');return;}
   if(ppOrganizationId && payload.organization_id!==ppOrganizationId){showToast('Ce QR appartient à une autre organisation.');return;}
