@@ -246,7 +246,8 @@ function renderRecent(){
 function renderEmployees(){
   const q=(document.getElementById("employeeSearch").value||"").toLowerCase();
   const filter=document.getElementById("employeeFilter").value;
-  const list=employees.filter(e=>(e.name.toLowerCase().includes(q)||e.code.toLowerCase().includes(q))&&(filter==="all"||e.status===filter));
+  const accountFilter=document.getElementById("employeeAccountFilter")?.value||"all";
+  const list=employees.filter(e=>(e.name.toLowerCase().includes(q)||e.code.toLowerCase().includes(q))&&(filter==="all"||e.status===filter)&&(accountFilter==="all"||(accountFilter==="linked"&&e.accountLinked)||(accountFilter==="unlinked"&&!e.accountLinked)));
   document.getElementById("employeeTable").innerHTML=list.map(e=>`<tr><td>${personHTML(e.name,e.code,e.initials,e.photo)}</td><td>${e.code}</td><td>${e.department}</td><td>${e.accountLinked?'<span class="bio-ok">● Compte associé</span>':'<span class="bio-missing">● À associer</span>'}</td><td>${statusHTML(e.status)}</td><td>${e.time}</td><td><button class="ghost-btn employee-view-btn" type="button" data-employee-id="${String(e.id)}">Voir</button></td></tr>`).join("")||`<tr><td colspan="7" style="text-align:center;color:#8794a6;padding:30px">Aucun employé trouvé.</td></tr>`;
 }
 function escapeHTML(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
@@ -403,6 +404,7 @@ document.getElementById("employeeForm").addEventListener("submit",async e=>{
 
 document.getElementById("employeeSearch").addEventListener("input",renderEmployees);
 document.getElementById("employeeFilter").addEventListener("change",renderEmployees);
+document.getElementById("employeeAccountFilter")?.addEventListener("change",renderEmployees);
 document.getElementById("historySearch").addEventListener("input",renderHistory);
 document.getElementById('historyDate')?.addEventListener('change',renderHistory);
 document.getElementById('reportFrom')?.addEventListener('change',renderReports);document.getElementById('reportTo')?.addEventListener('change',renderReports);document.getElementById('reportDepartment')?.addEventListener('change',renderReports);
