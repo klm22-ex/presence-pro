@@ -152,16 +152,29 @@ function showApp(mode){
   if(landing)landing.style.display='none';
   if(shell){shell.style.display='flex';shell.classList.remove('mode-admin','mode-agent');shell.classList.add(mode==='agent'?'mode-agent':'mode-admin');}
 }
-async function enterAdmin(){
+async function enterAdmin(afterAuthentication=false){
+  // Un clic depuis l'accueil exige toujours une nouvelle saisie des identifiants.
+  if(!afterAuthentication){
+    if(ppSupabase && ppSession){
+      try{await ppSupabase.auth.signOut();}catch(err){console.error('Déconnexion avant authentification:',err);}
+      ppSession=null;ppUserRole=null;ppOrganizationId=null;employeePortalUser=null;
+    }
+    showApp('admin');ppAuthModal(true);ppSetAuthStatus('');
+    const form=document.getElementById('authForm');if(form)form.reset();
+    return;
+  }
   if(!ppSession){showApp('admin');ppAuthModal(true);return;}
   try{
     await ppLoadOrganization();
     if(!['owner','admin'].includes(ppUserRole)){
+      await ppSupabase.auth.signOut();
+      ppSession=null;ppUserRole=null;ppOrganizationId=null;employeePortalUser=null;
       ppAuthModal(false);backToHome();
-      showToast('Accès refusé : ce compte n’a pas les droits administrateur.');
+      showToast('Accès refusé : ce compte ne possède pas les droits administrateur.');
       return;
     }
     showApp('admin');ppAuthModal(false);navigateTo('dashboard');
+    ppSetAuthStatus('');
   }catch(err){
     ppAuthModal(true);
     ppSetAuthStatus(err.message||'Impossible de vérifier les droits administrateur.');
@@ -572,9 +585,11 @@ renderBiometric();updateBiometricDeviceStatus();
     try{
       const {error}=await ppSupabase.auth.signOut();
       if(error)throw error;
-      ppSession=null;employeePortalUser=null;
+      ppSession=null;ppUserRole=null;ppOrganizationId=null;employeePortalUser=null;
+      const authForm=document.getElementById('authForm');if(authForm)authForm.reset();
+      ppSetAuthStatus('');
       backToHome();
-      showToast('Vous êtes déconnecté. Reconnectez-vous via Administrateur.');
+      showToast('Déconnexion réussie. Pour revenir à l’administration, saisissez à nouveau votre e-mail et votre mot de passe.');
     }catch(err){
       showToast(err.message||'Impossible de se déconnecter.');
     }finally{
@@ -589,7 +604,7 @@ renderBiometric();updateBiometricDeviceStatus();
         if(!name||!org){ppSetAuthStatus('Nom et organisation sont obligatoires.');return;}
         localStorage.setItem('pp_pending_org',JSON.stringify({name,org}));
         const {data,error}=await ppSupabase.auth.signUp({email,password});if(error)throw error;
-        if(data.session){ppSession=data.session;await ppBootCloud();await enterAdmin();}else ppSetAuthStatus('Compte créé. Vérifiez votre email si la confirmation est activée, puis connectez-vous.');
+        if(data.session){ppSession=data.session;await ppBootCloud();await enterAdmin(true);}else ppSetAuthStatus('Compte créé. Vérifiez votre email si la confirmation est activée, puis connectez-vous.');
       }else{const {data,error}=await ppSupabase.auth.signInWithPassword({email,password});if(error)throw error;ppSession=data.session;await ppBootCloud();await enterAdmin();}
     }catch(err){ppSetAuthStatus(err.message||'Erreur de connexion.');}
   });
