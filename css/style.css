@@ -73,3 +73,34 @@ button,input,select{font:inherit} button{cursor:pointer;border:0}.app-shell{disp
 
 /* V15 — notifications et offres */
 .icon-btn{position:relative}.notification-count{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:#dc2626;color:#fff;font-size:10px;font-weight:800}.notification-count[hidden]{display:none}.subscription-modal{max-width:900px;width:min(900px,96vw)}.subscription-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0}.subscription-grid article{border:1px solid #e1e7ef;border-radius:16px;padding:18px;display:flex;flex-direction:column;align-items:flex-start;gap:10px}.subscription-grid article.featured{border-color:#4777f5;box-shadow:0 8px 28px #315bd31c}.subscription-grid article>span{font-size:11px;font-weight:800;letter-spacing:1px;color:#4777f5}.subscription-grid h3{margin:0}.subscription-grid p{color:#6b778b;font-size:13px;line-height:1.5}.subscription-grid ul{padding-left:18px;line-height:1.9;font-size:12px;flex:1}.subscription-grid button{width:100%}@media(max-width:760px){.subscription-grid{grid-template-columns:1fr}}
+
+
+/* PrésencePro — mouvement subtil, utile et accessible */
+:root{--motion-fast:160ms;--motion-medium:260ms;--motion-slow:420ms;--ease-out:cubic-bezier(.2,.75,.25,1)}
+@keyframes ppFadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ppFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes ppModalIn{from{opacity:0;transform:translateY(12px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes ppToastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ppSoftPulse{0%,100%{box-shadow:0 0 0 0 rgba(35,100,210,0)}50%{box-shadow:0 0 0 5px rgba(35,100,210,.08)}}
+.page-section.active{animation:ppFadeUp var(--motion-medium) var(--ease-out) both}
+.page-section.active .hero,.page-section.active .section-heading{animation:ppFadeUp 320ms var(--ease-out) both}
+.page-section.active .stat-card,.page-section.active .card,.page-section.active .panel,.page-section.active .chart-card{animation:ppFadeUp 380ms var(--ease-out) both}
+.page-section.active .stat-card:nth-child(2){animation-delay:45ms}
+.page-section.active .stat-card:nth-child(3){animation-delay:90ms}
+.page-section.active .stat-card:nth-child(4){animation-delay:135ms}
+.stat-card,.card,.panel,.chart-card,.employee-card,.report-card{transition:transform var(--motion-medium) var(--ease-out),box-shadow var(--motion-medium) var(--ease-out),border-color var(--motion-fast) ease}
+.stat-card:hover,.card:hover,.panel:hover,.chart-card:hover,.employee-card:hover,.report-card:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(16,35,63,.09)}
+button,.nav-item,.icon-btn,.profile-mini{transition:background-color var(--motion-fast) ease,color var(--motion-fast) ease,border-color var(--motion-fast) ease,box-shadow var(--motion-fast) ease,transform var(--motion-fast) var(--ease-out)}
+button:active{transform:translateY(1px) scale(.985)}
+.primary-btn:hover{box-shadow:0 8px 20px rgba(35,100,210,.26)}
+.nav-item:hover{transform:translateX(3px)}
+.nav-item.active{transition:background-color var(--motion-fast) ease,box-shadow var(--motion-medium) var(--ease-out)}
+input,select,textarea{transition:border-color var(--motion-fast) ease,box-shadow var(--motion-fast) ease}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#6d9bea!important;box-shadow:0 0 0 3px rgba(35,100,210,.12)}
+.modal-overlay.open{animation:ppFadeIn 180ms ease both}
+.modal-overlay.open .modal{animation:ppModalIn 240ms var(--ease-out) both}
+.toast{animation:ppToastIn 220ms var(--ease-out) both}
+.icon-btn:hover{background:#f4f7fc;border-color:#cbd8ea}
+button:focus-visible,.nav-item:focus-visible,a:focus-visible{outline:3px solid rgba(35,100,210,.45);outline-offset:3px}
+@media(hover:none){.stat-card:hover,.card:hover,.panel:hover,.chart-card:hover,.employee-card:hover,.report-card:hover{transform:none;box-shadow:var(--shadow)}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
