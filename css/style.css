@@ -104,3 +104,50 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#6d9bea!import
 button:focus-visible,.nav-item:focus-visible,a:focus-visible{outline:3px solid rgba(35,100,210,.45);outline-offset:3px}
 @media(hover:none){.stat-card:hover,.card:hover,.panel:hover,.chart-card:hover,.employee-card:hover,.report-card:hover{transform:none;box-shadow:var(--shadow)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+
+/* PrésencePro — finition visuelle premium */
+.landing{position:relative;isolation:isolate;overflow:hidden;background:radial-gradient(ellipse at 12% 12%,#e3efff 0,transparent 34%),radial-gradient(ellipse at 88% 86%,#dce9ff 0,transparent 32%),linear-gradient(135deg,#f8faff 0%,#eef3fa 100%)}
+.landing:before,.landing:after{content:"";position:absolute;z-index:-1;border:1px solid rgba(46,100,180,.12);border-radius:50%;pointer-events:none}
+.landing:before{width:460px;height:460px;right:-180px;top:-210px;box-shadow:0 0 0 38px rgba(46,100,180,.025),0 0 0 82px rgba(46,100,180,.02)}
+.landing:after{width:300px;height:300px;left:-180px;bottom:-160px;box-shadow:0 0 0 32px rgba(46,100,180,.025)}
+.landing-card{position:relative;overflow:hidden;border-radius:26px;border-color:rgba(255,255,255,.9);box-shadow:0 28px 90px rgba(20,44,78,.13),0 3px 12px rgba(20,44,78,.04);animation:ppFadeUp 520ms var(--ease-out) both}
+.landing-card:before{content:"";position:absolute;inset:0 0 auto;height:5px;background:linear-gradient(90deg,#1c5bc2,#5b9af5,#8fc5ff)}
+.landing-brand .brand-mark{background:linear-gradient(145deg,#18385f,#2e6ac4);color:#fff;box-shadow:0 8px 18px rgba(35,100,210,.22)}
+.landing .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #e3ebf7;background:#f5f8fe;border-radius:99px;color:#4c6b96}
+.landing .eyebrow:before{content:"";width:6px;height:6px;border-radius:50%;background:#28a879;box-shadow:0 0 0 4px #28a8791c}
+.landing h1{letter-spacing:-1.6px;color:#142b49}
+.landing h1 span{background:linear-gradient(100deg,#205dbb,#438ce8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.landing-subtitle{max-width:610px;color:#64748b}
+.role-card{position:relative;min-height:112px;border-radius:16px;background:linear-gradient(145deg,#fff,#fbfdff);box-shadow:0 5px 18px rgba(22,48,82,.045)}
+.role-card:focus-visible{outline:3px solid #8db8fa;outline-offset:3px}
+.admin-role .role-icon{background:linear-gradient(145deg,#e8f1ff,#dceaff);color:#245eb4}
+.agent-role .role-icon{background:linear-gradient(145deg,#e7f8f1,#d8f1e7);color:#16885b}
+.role-card b{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#f1f5fb;transition:transform 180ms ease,background 180ms ease}
+.role-card:hover b{transform:translateX(3px);background:#e6efff}
+.landing-note{display:flex;justify-content:center;align-items:center;gap:7px}
+.auth-modal{width:min(460px,100%);padding:34px;border:1px solid rgba(255,255,255,.85);border-radius:20px;box-shadow:0 30px 100px rgba(5,20,43,.3);overflow:hidden}
+.auth-modal:before{content:"";display:block;height:4px;position:absolute;top:0;left:0;right:0;background:linear-gradient(90deg,#1d5ec2,#6ca9f5)}
+.auth-modal .eyebrow{display:inline-flex;padding:6px 9px;border-radius:99px;background:#f0f5ff;color:#315f9f}
+.auth-modal h2{font-size:25px;letter-spacing:-.6px;color:#142b49;margin-top:8px}
+.auth-modal .modal-subtitle{font-size:12px;line-height:1.6;color:#738197}
+.auth-modal label{font-size:12px;font-weight:700;color:#45566f}
+.auth-modal input{margin-top:7px;min-height:46px;padding:0 13px;border:1px solid #dfe6f0;border-radius:10px;background:#fbfcfe;font-size:13px}
+.auth-modal input:focus{background:#fff}
+.auth-modal .primary-btn{min-height:46px;border-radius:10px;background:linear-gradient(110deg,#1e5dbd,#347be0);box-shadow:0 8px 18px rgba(35,100,210,.2)}
+.auth-modal #authToggle{min-height:42px;border-radius:10px;background:#f7f9fc}
+.auth-modal .security-note{font-size:11px;line-height:1.5}
+.topbar{box-shadow:0 3px 16px rgba(16,35,63,.025)}
+.date-pill{border-radius:99px;background:#f8faff}
+.stat-card{border-radius:14px}
+.panel,.chart-card{border-radius:15px}
+.progress-ring{filter:drop-shadow(0 5px 10px rgba(35,100,210,.08))}
+.toast{border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(12px);border-radius:12px;padding:14px 18px;font-size:12px}
+@media(max-width:760px){
+ .landing{padding:18px;align-items:flex-start}
+ .landing-card{padding:30px 22px;margin:auto 0}
+ .landing-brand{margin-bottom:26px}
+ .landing h1{font-size:clamp(31px,9vw,42px)}
+ .role-card{min-height:94px;padding:16px}
+ .auth-modal{padding:30px 22px}
+}
