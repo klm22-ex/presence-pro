@@ -144,7 +144,7 @@ const labels = {present:"Présent",late:"En retard",absent:"Absent"};
 function showApp(mode){
   const landing=document.getElementById('landingPage'), shell=document.getElementById('appShell');
   if(landing)landing.style.display='none';
-  if(shell){shell.classList.remove('mode-admin','mode-agent');shell.classList.add(mode==='agent'?'mode-agent':'mode-admin');}
+  if(shell){shell.style.display='flex';shell.classList.remove('mode-admin','mode-agent');shell.classList.add(mode==='agent'?'mode-agent':'mode-admin');}
 }
 function enterAdmin(){
   showApp('admin');
@@ -548,6 +548,22 @@ renderBiometric();updateBiometricDeviceStatus();
 (function initAuthUI(){
   const form=document.getElementById('authForm'),toggle=document.getElementById('authToggle'),title=document.getElementById('authTitle'),submit=document.getElementById('authSubmit'),fields=document.getElementById('signupFields');
   if(!form)return;let signup=false;
+  const logout=document.getElementById('adminLogoutBtn');
+  if(logout)logout.addEventListener('click',async()=>{
+    if(!ppSupabase){showToast('La connexion Supabase n’est pas disponible.');return;}
+    logout.disabled=true;logout.textContent='Déconnexion…';
+    try{
+      const {error}=await ppSupabase.auth.signOut();
+      if(error)throw error;
+      ppSession=null;employeePortalUser=null;
+      backToHome();
+      showToast('Vous êtes déconnecté. Reconnectez-vous via Administrateur.');
+    }catch(err){
+      showToast(err.message||'Impossible de se déconnecter.');
+    }finally{
+      logout.disabled=false;logout.textContent='↪ Se déconnecter';
+    }
+  });
   toggle.addEventListener('click',()=>{signup=!signup;title.textContent=signup?'Créer votre espace':'Connexion';submit.textContent=signup?'Créer le compte':'Se connecter';toggle.textContent=signup?'J’ai déjà un compte':'Créer un compte';fields.style.display=signup?'block':'none';});
   form.addEventListener('submit',async e=>{e.preventDefault();if(!ppHasSupabase()){ppSetAuthStatus('Ajoutez d’abord vos identifiants Supabase dans js/supabase-config.js.');return;}
     const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value,name=document.getElementById('authFullName').value.trim(),org=document.getElementById('authOrgName').value.trim();
