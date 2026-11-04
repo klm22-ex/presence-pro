@@ -2,6 +2,7 @@
 let ppSupabase = null;
 let ppSession = null;
 let ppOrganizationId = null;
+let ppUserRole = null;
 let employeePortalUser = null;
 const PP_CONFIG = window.PRESENCEPRO_SUPABASE || {};
 const PP_SUPABASE_READY = window.supabase && PP_CONFIG.url && PP_CONFIG.key && !PP_CONFIG.url.includes('YOUR_PROJECT_REF') && !PP_CONFIG.key.includes('YOUR_SUPABASE');
@@ -18,17 +19,22 @@ async function ppLoadOrganization(){
   const {data,error}=await ppSupabase.from('profiles').select('organization_id,full_name,role').eq('id',ppSession.user.id).maybeSingle();
   if(error)throw error;
   if(!data){
+    ppUserRole=null;
     const pending=JSON.parse(localStorage.getItem('pp_pending_org')||'null');
     if(pending){
       const {data:orgId,error:orgErr}=await ppSupabase.rpc('create_organization',{p_name:pending.org,p_full_name:pending.name});
       if(orgErr)throw orgErr;
       localStorage.removeItem('pp_pending_org');
       ppOrganizationId=orgId;
+      const {data:createdProfile,error:profileErr}=await ppSupabase.from('profiles').select('organization_id,role').eq('id',ppSession.user.id).maybeSingle();
+      if(profileErr)throw profileErr;
+      ppUserRole=createdProfile?.role||null;
+      if(createdProfile?.organization_id)ppOrganizationId=createdProfile.organization_id;
     }else{
       const {data:emp,error:empErr}=await ppSupabase.from('employees').select('organization_id').eq('auth_user_id',ppSession.user.id).maybeSingle();
-      if(empErr)throw empErr;if(emp)ppOrganizationId=emp.organization_id;
+      if(empErr)throw empErr;if(emp){ppOrganizationId=emp.organization_id;ppUserRole='employee';}
     }
-  }else ppOrganizationId=data.organization_id;
+  }else{ppOrganizationId=data.organization_id;ppUserRole=data.role||null;}
 }
 function ppLocalDateISO(date=new Date()){const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,'0'),d=String(date.getDate()).padStart(2,'0');return `${y}-${m}-${d}`;}
 function ppTime(value){return value?new Date(value).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'—';}
@@ -110,7 +116,7 @@ async function ppLoadBiometricCredentials(){
 async function ppInit(){
   if(!ppHasSupabase()){ppSetDemoIdentity();return;}
   const {data}=await ppSupabase.auth.getSession();ppSession=data.session;employeePortalUser=data.session?.user||null;
-  ppSupabase.auth.onAuthStateChange((_event,session)=>{ppSession=session;employeePortalUser=session?.user||null;if(session){ppAuthModal(false);ppBootCloud();}else if(document.getElementById('appShell')?.classList.contains('mode-admin'))ppAuthModal(true);});
+  ppSupabase.auth.onAuthStateChange((_event,session)=>{ppSession=session;employeePortalUser=session?.user||null;if(!session){ppUserRole=null;ppOrganizationId=null;}});
   if(!ppSession){return;}
   await ppBootCloud();
 }
@@ -146,10 +152,20 @@ function showApp(mode){
   if(landing)landing.style.display='none';
   if(shell){shell.style.display='flex';shell.classList.remove('mode-admin','mode-agent');shell.classList.add(mode==='agent'?'mode-agent':'mode-admin');}
 }
-function enterAdmin(){
-  showApp('admin');
-  if(ppSession){ppAuthModal(false);navigateTo('dashboard');return;}
-  ppAuthModal(true);
+async function enterAdmin(){
+  if(!ppSession){showApp('admin');ppAuthModal(true);return;}
+  try{
+    await ppLoadOrganization();
+    if(!['owner','admin'].includes(ppUserRole)){
+      ppAuthModal(false);backToHome();
+      showToast('Accès refusé : ce compte n’a pas les droits administrateur.');
+      return;
+    }
+    showApp('admin');ppAuthModal(false);navigateTo('dashboard');
+  }catch(err){
+    ppAuthModal(true);
+    ppSetAuthStatus(err.message||'Impossible de vérifier les droits administrateur.');
+  }
 }
 function enterAgent(){
   showApp('agent');
@@ -573,8 +589,8 @@ renderBiometric();updateBiometricDeviceStatus();
         if(!name||!org){ppSetAuthStatus('Nom et organisation sont obligatoires.');return;}
         localStorage.setItem('pp_pending_org',JSON.stringify({name,org}));
         const {data,error}=await ppSupabase.auth.signUp({email,password});if(error)throw error;
-        if(data.session){ppSession=data.session;await ppBootCloud();enterAdmin();}else ppSetAuthStatus('Compte créé. Vérifiez votre email si la confirmation est activée, puis connectez-vous.');
-      }else{const {data,error}=await ppSupabase.auth.signInWithPassword({email,password});if(error)throw error;ppSession=data.session;await ppBootCloud();enterAdmin();}
+        if(data.session){ppSession=data.session;await ppBootCloud();await enterAdmin();}else ppSetAuthStatus('Compte créé. Vérifiez votre email si la confirmation est activée, puis connectez-vous.');
+      }else{const {data,error}=await ppSupabase.auth.signInWithPassword({email,password});if(error)throw error;ppSession=data.session;await ppBootCloud();await enterAdmin();}
     }catch(err){ppSetAuthStatus(err.message||'Erreur de connexion.');}
   });
 })();
@@ -709,7 +725,7 @@ async function handleCompanyQr(text){
 }
 async function showCompanyQr(){
   const box=document.getElementById('companyQr'); if(!box)return;
-  if(!ppSupabase||!ppSession||!ppOrganizationId){showToast('Connectez-vous à l’espace administrateur pour générer le QR.');return;}
+  if(!ppSupabase||!ppSession||!ppOrganizationId||!['owner','admin'].includes(ppUserRole)){showToast('Accès refusé : connectez-vous avec un compte administrateur autorisé.');return;}
   if(typeof QRCode==='undefined'){showToast('Le générateur QR n’est pas chargé. Actualisez la page puis réessayez.');return;}
   box.innerHTML='Génération du QR quotidien…';
   try{
