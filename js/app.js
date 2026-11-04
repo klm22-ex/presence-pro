@@ -71,7 +71,7 @@ async function ppLoadEmployees(){
     let photo='';
     if(e.photo_path){const {data}=await ppSupabase.storage.from('employee-photos').createSignedUrl(e.photo_path,3600);photo=data?.signedUrl||'';}
     const arrival=a?.arrival_at||null;
-    employees.push({id:e.id,name:e.full_name,code:e.code,department:e.department||'Autre',active:e.active!==false,status:ppAttendanceStatus(arrival),time:ppTime(arrival),initials:e.full_name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase(),photo,fingerprint:false,nativeBiometric:false,biometricId:null,supabaseId:e.id});
+    employees.push({id:e.id,name:e.full_name,code:e.code,department:e.department||'Autre',active:e.active!==false,status:ppAttendanceStatus(arrival),time:ppTime(arrival),initials:e.full_name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase(),photo,authUserId:e.auth_user_id||null,accountLinked:!!e.auth_user_id,fingerprint:false,nativeBiometric:false,biometricId:null,supabaseId:e.id});
   }
   history.splice(0,history.length,...(att||[]).map(r=>{const emp=employeeMap.get(r.employee_id);return [ppDateLabel(r.attendance_date),emp?.full_name||'Employé supprimé',ppTime(r.arrival_at),ppTime(r.departure_at),r.arrival_at?ppAttendanceStatus(r.arrival_at):'absent'];}));
   renderRecent();renderEmployees();renderHistory();renderBiometric();ppRefreshDashboard();
@@ -247,7 +247,7 @@ function renderEmployees(){
   const q=(document.getElementById("employeeSearch").value||"").toLowerCase();
   const filter=document.getElementById("employeeFilter").value;
   const list=employees.filter(e=>(e.name.toLowerCase().includes(q)||e.code.toLowerCase().includes(q))&&(filter==="all"||e.status===filter));
-  document.getElementById("employeeTable").innerHTML=list.map(e=>`<tr><td>${personHTML(e.name,e.code,e.initials,e.photo)}</td><td>${e.code}</td><td>${e.department}</td><td>${e.fingerprint?'<span class="bio-ok">● Vérifiée</span>':'<span class="bio-missing">● Non enregistrée</span>'}</td><td>${statusHTML(e.status)}</td><td>${e.time}</td><td><button class="ghost-btn employee-view-btn" type="button" data-employee-id="${String(e.id)}">Voir</button></td></tr>`).join("")||`<tr><td colspan="7" style="text-align:center;color:#8794a6;padding:30px">Aucun employé trouvé.</td></tr>`;
+  document.getElementById("employeeTable").innerHTML=list.map(e=>`<tr><td>${personHTML(e.name,e.code,e.initials,e.photo)}</td><td>${e.code}</td><td>${e.department}</td><td>${e.accountLinked?'<span class="bio-ok">● Compte associé</span>':'<span class="bio-missing">● À associer</span>'}</td><td>${statusHTML(e.status)}</td><td>${e.time}</td><td><button class="ghost-btn employee-view-btn" type="button" data-employee-id="${String(e.id)}">Voir</button></td></tr>`).join("")||`<tr><td colspan="7" style="text-align:center;color:#8794a6;padding:30px">Aucun employé trouvé.</td></tr>`;
 }
 function escapeHTML(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
 async function showEmployeeDetails(employeeId){
@@ -265,7 +265,7 @@ async function showEmployeeDetails(employeeId){
     <label>Département<select id="editEmployeeDepartment"><option ${emp.department==='Administration'?'selected':''}>Administration</option><option ${emp.department==='Finance'?'selected':''}>Finance</option><option ${emp.department==='Ressources humaines'?'selected':''}>Ressources humaines</option><option ${emp.department==='Informatique'?'selected':''}>Informatique</option><option ${emp.department==='Enseignement'?'selected':''}>Enseignement</option><option ${emp.department==='Autre'?'selected':''}>Autre</option></select></label>
     <label>Remplacer la photo (facultatif)<input id="editEmployeePhoto" type="file" accept="image/*"></label>
     <label class="employee-active-toggle"><input id="editEmployeeActive" type="checkbox" ${emp.active===false?'':'checked'}> Employé actif</label>
-    <div class="employee-detail-grid"><div><small>Statut du jour</small><strong>${escapeHTML(labels[emp.status]||emp.status||"Non renseigné")}</strong></div><div><small>Dernier pointage</small><strong>${escapeHTML(emp.time||"—")}</strong></div><div><small>Biométrie</small><strong>${emp.nativeBiometric||emp.fingerprint?"Enregistrée":"Non enregistrée"}</strong></div></div>
+    <div class="employee-detail-grid"><div><small>Statut du jour</small><strong>${escapeHTML(labels[emp.status]||emp.status||"Non renseigné")}</strong></div><div><small>Dernier pointage</small><strong>${escapeHTML(emp.time||"—")}</strong></div><div><small>Compte agent</small><strong>${emp.accountLinked?"Associé":"Non associé"}</strong></div><div><small>Email de connexion</small><strong>${escapeHTML(emp.authEmail||"Non disponible")}</strong></div></div>
     <button class="primary-btn full" type="submit">Enregistrer les modifications</button><p class="employee-edit-note">Les changements seront enregistrés dans Supabase si vous êtes connecté comme administrateur.</p>
   </form><div class="employee-detail-history"><h3>Historique récent</h3><p class="detail-loading">Chargement de l’historique…</p></div>`;
   const editForm=body.querySelector('#editEmployeeForm');
