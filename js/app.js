@@ -693,28 +693,40 @@ async function startQrScan(){
 }
 async function handleCompanyQr(text){
   let payload;try{payload=JSON.parse(text);}catch{showToast('QR PrésencePro non reconnu.');return;}
-  if(payload.type!=='presencepro-company'||!payload.organization_id){showToast('Ce QR n’est pas un QR PrésencePro valide.');return;}
+  if(payload.type!=='presencepro-company'||!payload.organization_id||!payload.token){showToast('QR du jour invalide ou incomplet.');return;}
   if(ppOrganizationId && payload.organization_id!==ppOrganizationId){showToast('Ce QR appartient à une autre organisation.');return;}
-  if(!ppSupabase||!ppSession){showToast('Connectez d’abord le compte de l’employé sur ce téléphone.');return;}
+  if(!ppSupabase||!ppSession){showToast('Connectez d’abord votre compte employé sur ce téléphone.');return;}
   const {data:emp,error}=await ppSupabase.from('employees').select('id,full_name,code').eq('organization_id',payload.organization_id).eq('auth_user_id',ppSession.user.id).maybeSingle();
   if(error||!emp){showToast('Aucun employé associé à ce compte dans cette entreprise.');return;}
-  const {data:result,error:recordError}=await ppSupabase.rpc('record_my_attendance',{p_organization_id:payload.organization_id});
+  const {data:result,error:recordError}=await ppSupabase.rpc('record_my_attendance_with_qr',{p_organization_id:payload.organization_id,p_token:payload.token});
   if(recordError){showToast(recordError.message||'Pointage impossible.');return;}
   const action=result?.action==='arrival'?'Arrivée':'Départ';
   const timestamp=action==='Arrivée'?result?.arrival_at:result?.departure_at;
-  document.getElementById('kioskResult').innerHTML=`<span class="kiosk-icon">✅</span><div><strong>${action} enregistrée</strong><small>${escapeHTML(result?.employee_name||emp.full_name)} • ${timestamp?new Date(timestamp).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</small></div>`;
-  showToast(`Pointage enregistré pour ${result?.employee_name||emp.full_name}.`);
+  const resultBox=document.getElementById('kioskResult');
+  if(resultBox)resultBox.innerHTML=`<span class="kiosk-icon">✅</span><div><strong>${action} enregistrée</strong><small>${escapeHTML(result?.employee_name||emp.full_name)} • ${timestamp?new Date(timestamp).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</small></div>`;
+  showToast(`${action} enregistrée pour ${result?.employee_name||emp.full_name}.`);
   await loadAgentHistory();await loadMyLeaveRequests();
 }
-function showCompanyQr(){
+async function showCompanyQr(){
   const box=document.getElementById('companyQr'); if(!box)return;
-  if(!ppOrganizationId){showToast('Connectez-vous à l’espace administrateur pour générer le QR.');return;}
-  const text=JSON.stringify({type:'presencepro-company',organization_id:ppOrganizationId,version:1});
-  box.innerHTML='';
-  if(window.QRCode){new QRCode(box,{text,width:180,height:180});return;}
-  // Fallback visuel si la bibliothèque QR n’est pas disponible.
-  box.textContent='QR';box.title=text;
-  showToast('Le générateur QR sera activé avec le module QR configuré.');
+  if(!ppSupabase||!ppSession||!ppOrganizationId){showToast('Connectez-vous à l’espace administrateur pour générer le QR.');return;}
+  if(typeof QRCode==='undefined'){showToast('Le générateur QR n’est pas chargé. Actualisez la page puis réessayez.');return;}
+  box.innerHTML='Génération du QR quotidien…';
+  try{
+    const {data,error}=await ppSupabase.rpc('get_daily_company_qr',{p_organization_id:ppOrganizationId});
+    if(error)throw error;
+    const payload={type:'presencepro-company',organization_id:data.organization_id,token:data.token,version:2};
+    box.innerHTML='';
+    new QRCode(box,{text:JSON.stringify(payload),width:200,height:200,correctLevel:QRCode.CorrectLevel.M});
+    const expiry=new Date(data.expires_at).toLocaleString('fr-FR',{timeZone:'Africa/Kinshasa',dateStyle:'short',timeStyle:'short'});
+    const label=document.createElement('small');
+    label.textContent='Valable jusqu’au '+expiry+' • Fuseau Africa/Kinshasa';
+    box.appendChild(label);
+    showToast('QR quotidien sécurisé prêt à être affiché.');
+  }catch(e){
+    box.textContent='QR indisponible';
+    showToast(e.message||'Impossible de générer le QR du jour.');
+  }
 }
 async function verifyEmployeeBiometric(){
   if(!webauthnReady()){showToast('Biométrie native indisponible : utilisez HTTPS et un appareil compatible.');return;}
