@@ -710,32 +710,57 @@ async function claimEmployeeAccount(){
   }catch(e){showToast('Association impossible : '+(e.message||'code invalide ou déjà utilisé'));}
 }
 
+function setKioskFeedback(kind,title,detail){
+  const box=document.getElementById('kioskResult');if(!box)return;
+  box.className='kiosk-result '+kind;
+  const icon=kind==='success'?'✓':kind==='error'?'!':kind==='loading'?'…':'⌁';
+  box.innerHTML='<span class="kiosk-icon" aria-hidden="true">'+icon+'</span><div><strong>'+escapeHTML(title)+'</strong><small>'+escapeHTML(detail||'')+'</small></div>';
+}
 async function startQrScan(){
-  if(typeof Html5Qrcode==='undefined'){showToast('Le module de scan QR n’est pas chargé.');return;}
-  const el=document.getElementById('qrReader');
-  if(qrScanner){try{await qrScanner.stop();}catch{} qrScanner=null;}
-  qrScanner=new Html5Qrcode('qrReader');
+  if(typeof Html5Qrcode==='undefined'){setKioskFeedback('error','Scanner indisponible','Actualisez la page puis réessayez.');showToast('Le module de scan QR n’est pas chargé.');return;}
+  if(!ppSession){setKioskFeedback('error','Connexion nécessaire','Connectez votre compte employé avant de scanner.');showToast('Connectez d’abord votre compte employé.');return;}
+  const button=document.getElementById('startQrBtn');
+  if(button){button.disabled=true;button.textContent='Ouverture de la caméra…';}
+  setKioskFeedback('loading','Préparation du scan','Autorisez l’accès à la caméra si votre téléphone le demande.');
   try{
+    if(qrScanner){try{await qrScanner.stop();}catch{}qrScanner=null;}
+    qrScanner=new Html5Qrcode('qrReader');
     await qrScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:220,height:220}},async text=>{
-      try{await qrScanner.stop();}catch{} qrScanner=null;
+      if(qrScanner){try{await qrScanner.stop();}catch{}qrScanner=null;}
+      if(button){button.disabled=false;button.textContent='↻ Scanner à nouveau';}
       await handleCompanyQr(text);
     });
-  }catch(e){showToast('Impossible d’ouvrir la caméra. Vérifiez l’autorisation caméra et utilisez HTTPS.');}
+    setKioskFeedback('loading','Caméra active','Placez le QR de votre entreprise dans le cadre.');
+    if(button)button.textContent='Caméra activée — cadrer le QR';
+  }catch(e){
+    qrScanner=null;
+    if(button){button.disabled=false;button.textContent='Réessayer le scan';}
+    setKioskFeedback('error','Caméra inaccessible','Vérifiez l’autorisation caméra et utilisez le site en HTTPS.');
+    showToast('Impossible d’ouvrir la caméra. Vérifiez l’autorisation caméra et utilisez HTTPS.');
+  }
 }
 async function handleCompanyQr(text){
-  let payload;try{payload=JSON.parse(text);}catch{showToast('QR PrésencePro non reconnu.');return;}
-  if(payload.type!=='presencepro-company'||!payload.organization_id||!payload.token){showToast('QR du jour invalide ou incomplet.');return;}
-  if(ppOrganizationId && payload.organization_id!==ppOrganizationId){showToast('Ce QR appartient à une autre organisation.');return;}
-  if(!ppSupabase||!ppSession){showToast('Connectez d’abord votre compte employé sur ce téléphone.');return;}
+  setKioskFeedback('loading','Vérification du QR','Contrôle de sa validité et de votre compte…');
+  let payload;try{payload=JSON.parse(text);}catch{setKioskFeedback('error','QR non reconnu','Ce code ne correspond pas à un QR PrésencePro.');showToast('QR PrésencePro non reconnu.');return;}
+  if(payload.type!=='presencepro-company'||!payload.organization_id||!payload.token){setKioskFeedback('error','QR invalide','Le code est incomplet ou n’est pas un QR quotidien.');showToast('QR du jour invalide ou incomplet.');return;}
+  if(!ppSupabase||!ppSession){setKioskFeedback('error','Connexion nécessaire','Connectez votre compte employé sur ce téléphone.');showToast('Connectez d’abord votre compte employé sur ce téléphone.');return;}
   const {data:emp,error}=await ppSupabase.from('employees').select('id,full_name,code').eq('organization_id',payload.organization_id).eq('auth_user_id',ppSession.user.id).maybeSingle();
-  if(error||!emp){showToast('Aucun employé associé à ce compte dans cette entreprise.');return;}
+  if(error){setKioskFeedback('error','Vérification impossible','Un problème est survenu lors de la vérification de votre profil.');showToast(error.message||'Erreur de vérification du profil.');return;}
+  if(!emp){setKioskFeedback('error','Profil non associé','Demandez à votre administrateur d’associer votre compte à votre fiche employé.');showToast('Aucun employé associé à ce compte dans cette entreprise.');return;}
   const {data:result,error:recordError}=await ppSupabase.rpc('record_my_attendance_with_qr',{p_organization_id:payload.organization_id,p_token:payload.token});
-  if(recordError){showToast(recordError.message||'Pointage impossible.');return;}
+  if(recordError){
+    const msg=(recordError.message||'').toLowerCase();
+    const expired=msg.includes('token')||msg.includes('qr')||msg.includes('expired')||msg.includes('expire');
+    setKioskFeedback('error',expired?'QR expiré ou invalide':'Pointage non enregistré',expired?'Demandez le QR quotidien actuel à votre administrateur.':'Vérifiez votre connexion puis réessayez.');
+    showToast(recordError.message||'Pointage impossible.');return;
+  }
   const action=result?.action==='arrival'?'Arrivée':'Départ';
   const timestamp=action==='Arrivée'?result?.arrival_at:result?.departure_at;
-  const resultBox=document.getElementById('kioskResult');
-  if(resultBox)resultBox.innerHTML=`<span class="kiosk-icon">✅</span><div><strong>${action} enregistrée</strong><small>${escapeHTML(result?.employee_name||emp.full_name)} • ${timestamp?new Date(timestamp).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</small></div>`;
-  showToast(`${action} enregistrée pour ${result?.employee_name||emp.full_name}.`);
+  const time=timestamp?new Date(timestamp).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  const name=result?.employee_name||emp.full_name;
+  setKioskFeedback('success',action+' enregistrée avec succès',name+' • '+time+' • Pointage confirmé par le serveur.');
+  const btn=document.getElementById('startQrBtn');if(btn){btn.disabled=false;btn.textContent='Scanner à nouveau';}
+  showToast(action+' enregistrée pour '+name+'.');
   await loadAgentHistory();await loadMyLeaveRequests();
 }
 async function showCompanyQr(){
