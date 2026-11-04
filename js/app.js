@@ -605,7 +605,7 @@ renderBiometric();updateBiometricDeviceStatus();
         localStorage.setItem('pp_pending_org',JSON.stringify({name,org}));
         const {data,error}=await ppSupabase.auth.signUp({email,password});if(error)throw error;
         if(data.session){ppSession=data.session;await ppBootCloud();await enterAdmin(true);}else ppSetAuthStatus('Compte créé. Vérifiez votre email si la confirmation est activée, puis connectez-vous.');
-      }else{const {data,error}=await ppSupabase.auth.signInWithPassword({email,password});if(error)throw error;ppSession=data.session;await ppBootCloud();await enterAdmin();}
+      }else{const {data,error}=await ppSupabase.auth.signInWithPassword({email,password});if(error)throw error;ppSession=data.session;await ppBootCloud();await enterAdmin(true);}
     }catch(err){ppSetAuthStatus(err.message||'Erreur de connexion.');}
   });
 })();
