@@ -312,18 +312,16 @@
     <div class="modal auth-modal">
       <button class="modal-close" type="button" onclick="closeEmployeeAccess()">×</button>
       <p class="eyebrow">ESPACE EMPLOYÉ</p>
-      <h2>Accéder à mon pointage</h2>
-      <p class="modal-subtitle">Créez ou connectez votre compte, puis associez-le à votre matricule communiqué par l’administrateur.</p>
+      <h2 id="employeeAccessTitle">Se connecter</h2>
+      <p class="modal-subtitle" id="employeeAccessSubtitle">Connectez-vous avec l’adresse e-mail, le mot de passe et le matricule associés à votre profil.</p>
       <form id="employeeAccessForm">
-        <label>Nom complet <input id="employeeAccessName" placeholder="Ex. Kayowa Mulumba"></label>
-        <label>Email <input id="employeeAccessEmail" type="email" required placeholder="vous@entreprise.com"></label>
-        <label>Mot de passe <input id="employeeAccessPassword" type="password" required minlength="6" placeholder="••••••••"></label>
-        <label>Matricule <input id="employeeAccessCode" placeholder="Ex. PP-319CC2AB"></label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <button class="primary-btn" type="submit" data-mode="login">Se connecter</button>
-          <button class="ghost-btn" type="button" id="employeeCreateBtn">Créer mon compte</button>
-        </div>
+        <label id="employeeAccessNameLabel" hidden>Nom complet <input id="employeeAccessName" placeholder="Ex. Kayowa Mulumba"></label>
+        <label>Adresse e-mail <input id="employeeAccessEmail" type="email" required autocomplete="username" placeholder="vous@entreprise.com"></label>
+        <label>Mot de passe <input id="employeeAccessPassword" type="password" required minlength="6" autocomplete="current-password" placeholder="Votre mot de passe"></label>
+        <label>Matricule <input id="employeeAccessCode" required autocomplete="off" placeholder="Ex. 001"></label>
+        <button class="primary-btn full" id="employeeAccessSubmit" type="submit">Se connecter</button>
       </form>
+      <button class="ghost-btn full" id="employeeAccessToggle" type="button">Pas encore de compte ? Créer mon compte</button>
       <p id="employeeAccessStatus" class="security-note"></p>
     </div>
   </div>
