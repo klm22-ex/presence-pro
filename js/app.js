@@ -71,7 +71,7 @@ async function ppLoadEmployees(){
     let photo='';
     if(e.photo_path){const {data}=await ppSupabase.storage.from('employee-photos').createSignedUrl(e.photo_path,3600);photo=data?.signedUrl||'';}
     const arrival=a?.arrival_at||null;
-    employees.push({id:e.id,name:e.full_name,code:e.code,department:e.department||'Autre',active:e.active!==false,status:ppAttendanceStatus(arrival),time:ppTime(arrival),initials:e.full_name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase(),photo,authUserId:e.auth_user_id||null,accountLinked:!!e.auth_user_id,fingerprint:false,nativeBiometric:false,biometricId:null,supabaseId:e.id});
+    employees.push({id:e.id,name:e.full_name,email:e.email||'',code:e.code,department:e.department||'Autre',active:e.active!==false,status:ppAttendanceStatus(arrival),time:ppTime(arrival),initials:e.full_name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase(),photo,authUserId:e.auth_user_id||null,accountLinked:!!e.auth_user_id,fingerprint:false,nativeBiometric:false,biometricId:null,supabaseId:e.id});
   }
   history.splice(0,history.length,...(att||[]).map(r=>{const emp=employeeMap.get(r.employee_id);return [ppDateLabel(r.attendance_date),emp?.full_name||'Employé supprimé',ppTime(r.arrival_at),ppTime(r.departure_at),r.arrival_at?ppAttendanceStatus(r.arrival_at):'absent'];}));
   renderRecent();renderEmployees();renderHistory();renderBiometric();ppRefreshDashboard();
@@ -262,6 +262,7 @@ async function showEmployeeDetails(employeeId){
   <form id="editEmployeeForm" class="employee-edit-form" data-employee-id="${escapeHTML(emp.id)}">
     <h3>Informations du profil</h3>
     <label>Nom complet<input id="editEmployeeName" required maxlength="120" value="${escapeHTML(emp.name)}"></label>
+    <label>E-mail professionnel<input id="editEmployeeEmail" type="email" required maxlength="254" value="${escapeHTML(emp.email||"")}" placeholder="agent@entreprise.com"></label>
     <label>Matricule<input id="editEmployeeCode" required maxlength="40" value="${escapeHTML(emp.code)}"></label>
     <label>Département<select id="editEmployeeDepartment"><option ${emp.department==='Administration'?'selected':''}>Administration</option><option ${emp.department==='Finance'?'selected':''}>Finance</option><option ${emp.department==='Ressources humaines'?'selected':''}>Ressources humaines</option><option ${emp.department==='Informatique'?'selected':''}>Informatique</option><option ${emp.department==='Enseignement'?'selected':''}>Enseignement</option><option ${emp.department==='Autre'?'selected':''}>Autre</option></select></label>
     <label>Remplacer la photo (facultatif)<input id="editEmployeePhoto" type="file" accept="image/*"></label>
@@ -274,6 +275,7 @@ async function showEmployeeDetails(employeeId){
     event.preventDefault();
     const saveButton=editForm.querySelector('button[type="submit"]');saveButton.disabled=true;saveButton.textContent='Enregistrement…';
     const name=document.getElementById('editEmployeeName').value.trim();
+    const email=document.getElementById('editEmployeeEmail').value.trim().toLowerCase();
     const code=document.getElementById('editEmployeeCode').value.trim().toUpperCase();
     const department=document.getElementById('editEmployeeDepartment').value;
     const active=document.getElementById('editEmployeeActive').checked;
@@ -282,7 +284,7 @@ async function showEmployeeDetails(employeeId){
     try{
       const realId=emp.supabaseId||((typeof emp.id==='string'&&emp.id.includes('-'))?emp.id:null);
       if(ppSupabase&&ppSession&&ppOrganizationId&&realId){
-        const patch={full_name:name,code,department,active};
+        const patch={full_name:name,email,code,department,active};
         if(photoFile){
           const ext=(photoFile.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
           const photoPath=`${ppOrganizationId}/${realId}.${ext}`;
@@ -296,7 +298,7 @@ async function showEmployeeDetails(employeeId){
         const refreshed=employees.find(x=>String(x.id)===String(realId));
         if(refreshed)showEmployeeDetails(refreshed.id);
       }else{
-        emp.name=name;emp.code=code;emp.department=department;emp.active=active;
+        emp.name=name;emp.email=email;emp.code=code;emp.department=department;emp.active=active;
         if(photoFile){emp.photo=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(photoFile);});}
         emp.initials=name.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();
         renderEmployees();renderRecent();renderBiometric();showEmployeeDetails(emp.id);
