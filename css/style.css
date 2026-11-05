@@ -346,3 +346,6 @@ button:focus-visible,.nav-item:focus-visible,a:focus-visible{outline:3px solid r
 /* Agent account entry actions */
 .agent-access-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;position:relative;z-index:1}.agent-access-actions button{min-height:44px;padding:0 16px}
 @media(max-width:520px){.agent-access-actions{display:grid;grid-template-columns:1fr}.agent-access-actions button{width:100%;justify-content:center}}
+
+/* Etat du compte agent */
+.agent-connected{display:inline-flex;align-items:center;gap:8px;padding:11px 14px;border-radius:12px;background:#eaf7ef;color:#167344;font-weight:700;font-size:14px;}
