@@ -180,10 +180,10 @@ async function enterAdmin(afterAuthentication=false){
     ppSetAuthStatus(err.message||'Impossible de vérifier les droits administrateur.');
   }
 }
-function enterAgent(){
+async function enterAgent(){
   showApp('agent');
   navigateTo('agentHome');
-  loadEmployeeIdentity();
+  await loadEmployeeIdentity();
   loadAgentHistory();loadMyLeaveRequests();
 }
 async function agentSignOut(){
@@ -767,9 +767,19 @@ function employeeSignIn(){
     showToast('Compte employé connecté.');
   }).catch(e=>showToast('Connexion employé impossible : '+(e.message||'erreur')));
 }
+async function updateAgentAccessState(name=''){
+  const actions=document.getElementById('agentAccessActions');
+  if(!actions)return;
+  if(ppSupabase&&employeePortalUser){
+    actions.innerHTML='<span class="agent-connected">✓ Compte connecté'+(name?' : '+escapeHTML(name):'')+'</span><button class="secondary-btn" type="button" onclick="agentSignOut()">↪ Se déconnecter</button>';
+  }else{
+    actions.innerHTML='<button class="primary-btn" type="button" onclick="openEmployeeAccess(\'create\')">＋ Créer mon compte</button><button class="secondary-btn" type="button" onclick="openEmployeeAccess(\'login\')">🔑 Se connecter</button>';
+  }
+}
 async function loadEmployeeIdentity(){
   const box=document.getElementById('employeeIdentity'),profile=document.getElementById('agentProfileCard'),greeting=document.getElementById('agentGreeting');
   if(!ppSupabase||!employeePortalUser){
+    updateAgentAccessState();
     if(box)box.innerHTML='<div class="person-avatar">?</div><div><strong>Non connecté</strong><small>Connectez votre compte employé pour consulter votre profil.</small></div>';
     if(profile)profile.innerHTML='<div class="agent-profile-empty">Vous êtes déconnecté. Connectez-vous pour consulter votre profil et le statut de votre téléphone.</div>';
     if(greeting)greeting.textContent='👋';
@@ -777,9 +787,11 @@ async function loadEmployeeIdentity(){
   }
   const {data,error}=await ppSupabase.from('employees').select('id,full_name,code,department,photo_path,active').eq('auth_user_id',employeePortalUser.id).maybeSingle();
   if(error||!data){
+    updateAgentAccessState('Compte non associé');
     if(box)box.innerHTML='<div class="person-avatar">?</div><div><strong>Compte non associé</strong><small>Demandez à l’administrateur d’associer votre matricule.</small></div>';
     if(profile)profile.innerHTML='<div class="agent-profile-empty">Aucun profil employé n’est associé à ce compte.</div>';return;
   }
+  updateAgentAccessState(data.full_name||'Agent');
   const name=escapeHTML(data.full_name||'Employé'),initials=(data.full_name||'E').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
   let photoUrl='';if(data.photo_path){try{const {data:photo}=await ppSupabase.storage.from('employee-photos').createSignedUrl(data.photo_path,3600);photoUrl=photo?.signedUrl||'';}catch{}}
   const avatar=photoUrl?'<img src="'+escapeHTML(photoUrl)+'" alt="Photo de profil de '+name+'">':'<span>'+escapeHTML(initials)+'</span>';
