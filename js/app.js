@@ -388,16 +388,22 @@ document.getElementById("employeeForm").addEventListener("submit",async e=>{
   const department=document.getElementById("newDepartment").value;
   if(employees.some(x=>x.code===code)){showToast("Ce matricule existe déjà.");return;}
   const photo=document.getElementById("newPhoto").files[0];
+  let enrollmentCode=null;
   try{
     if(ppHasSupabase() && ppSession && ppOrganizationId){
-      const enrollmentCode=await ppCreateEmployee({name,code,department,photoFile:photo});
+      enrollmentCode=await ppCreateEmployee({name,code,department,photoFile:photo});
     }else{
       const photoUrl=photo?URL.createObjectURL(photo):"";
       employees.push({id:Date.now(),name,code,department,status:"absent",time:"—",initials:name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase(),photo:photoUrl,fingerprint:false,biometricId:null});
     }
     document.getElementById("employeeForm").reset();document.getElementById("photoPreview").innerHTML="<span>Aperçu photo</span>";modal.classList.remove("open");
     renderEmployees();renderRecent();renderBiometric();document.getElementById("totalEmployees").textContent=employees.length;
-    showToast(`${name} a été ajouté. Code d’association : ${enrollmentCode||'—'}`);
+    if(enrollmentCode){
+      window.prompt(`Profil de ${name} créé. Copiez et transmettez ce code à l’employé :`,enrollmentCode);
+      showToast(` ${name} a été ajouté. Conservez le code d’association.`);
+    }else{
+      showToast(`${name} a été ajouté en mode démonstration.`);
+    }
   }catch(err){showToast('Création impossible : '+(err.message||'erreur'));}
 
 });
