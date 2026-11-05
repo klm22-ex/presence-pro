@@ -342,3 +342,7 @@ button:focus-visible,.nav-item:focus-visible,a:focus-visible{outline:3px solid r
 .device-request-row>span{display:flex;flex:1;min-width:150px;flex-direction:column;gap:4px}
 .device-request-row small{color:var(--muted,#718096);font-size:12px}
 .device-request-row .primary-btn,.device-request-row .ghost-btn{padding:8px 12px;font-size:12px}
+
+/* Agent account entry actions */
+.agent-access-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;position:relative;z-index:1}.agent-access-actions button{min-height:44px;padding:0 16px}
+@media(max-width:520px){.agent-access-actions{display:grid;grid-template-columns:1fr}.agent-access-actions button{width:100%;justify-content:center}}
