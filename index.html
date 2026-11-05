@@ -275,7 +275,7 @@
     <div class="modal">
       <button class="modal-close" id="closeModal">×</button>
       <p class="eyebrow">NOUVEAU PROFIL</p><h2>Ajouter un employé</h2><p class="modal-subtitle">Créez un profil pour commencer à suivre ses présences.</p>
-      <form id="employeeForm"><label>Photo de l’agent<input id="newPhoto" type="file" accept="image/*" required></label><div class="photo-preview" id="photoPreview"><span>Aperçu photo</span></div><label>Nom complet<input id="newName" required placeholder="Ex. Jean Mukendi"></label><label>Matricule<input id="newCode" required placeholder="Ex. EMP025"></label><label>Département<select id="newDepartment"><option>Administration</option><option>Finance</option><option>Ressources humaines</option><option>Informatique</option><option>Enseignement</option><option>Autre</option></select></label><button class="primary-btn full" type="submit">Créer le profil</button></form>
+      <form id="employeeForm"><label>Photo de l’agent<input id="newPhoto" type="file" accept="image/*" required></label><div class="photo-preview" id="photoPreview"><span>Aperçu photo</span></div><label>Nom complet<input id="newName" required placeholder="Ex. Jean Mukendi"></label><label>Matricule automatique<input id="newCode" readonly placeholder="Attribué automatiquement"></label><label>Département<select id="newDepartment"><option>Administration</option><option>Finance</option><option>Ressources humaines</option><option>Informatique</option><option>Enseignement</option><option>Autre</option></select></label><button class="primary-btn full" type="submit">Créer le profil</button></form>
     </div>
   </div>
 
@@ -351,6 +351,6 @@
   <script src="js/supabase-config.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="js/app.js?v=20261105-enrollmentcode10"></script>
+  <script src="js/app.js?v=20261105-auto-matricule11"></script>
 </body>
 </html>
