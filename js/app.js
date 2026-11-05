@@ -378,15 +378,21 @@ const closeEmployeeDetails=document.getElementById("closeEmployeeDetails");
 if(closeEmployeeDetails)closeEmployeeDetails.addEventListener("click",()=>employeeDetailsModal?.classList.remove("open"));
 if(employeeDetailsModal)employeeDetailsModal.addEventListener("click",e=>{if(e.target===employeeDetailsModal)employeeDetailsModal.classList.remove("open");});
 const modal=document.getElementById("employeeModal");
-document.getElementById("addEmployeeBtn").addEventListener("click",()=>modal.classList.add("open"));
+document.getElementById("addEmployeeBtn").addEventListener("click",()=>{document.getElementById("newCode").value=ppNextEmployeeMatricule();modal.classList.add("open");});
 document.getElementById("closeModal").addEventListener("click",()=>modal.classList.remove("open"));
 modal.addEventListener("click",e=>{if(e.target===modal)modal.classList.remove("open")});
+function ppNextEmployeeMatricule(){
+  const numbers=employees.map(emp=>String(emp.code||'').trim().match(/^EMP(\\d+)$/i))
+    .filter(Boolean).map(match=>Number(match[1])).filter(Number.isFinite);
+  const next=Math.max(0,...numbers)+1;
+  return 'EMP'+String(next).padStart(3,'0');
+}
 document.getElementById("employeeForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const name=document.getElementById("newName").value.trim();
-  const code=document.getElementById("newCode").value.trim().toUpperCase();
+  const code=ppNextEmployeeMatricule();
   const department=document.getElementById("newDepartment").value;
-  if(employees.some(x=>x.code===code)){showToast("Ce matricule existe déjà.");return;}
+  document.getElementById("newCode").value=code;
   const photo=document.getElementById("newPhoto").files[0];
   let enrollmentCode=null;
   try{
