@@ -269,7 +269,7 @@ async function showEmployeeDetails(employeeId){
     <label class="employee-active-toggle"><input id="editEmployeeActive" type="checkbox" ${emp.active===false?'':'checked'}> Employé actif</label>
     <div class="employee-detail-grid"><div><small>Statut du jour</small><strong>${escapeHTML(labels[emp.status]||emp.status||"Non renseigné")}</strong></div><div><small>Dernier pointage</small><strong>${escapeHTML(emp.time||"—")}</strong></div><div><small>Compte agent</small><strong>${emp.accountLinked?"Associé":"Non associé"}</strong></div></div>
     <button class="primary-btn full" type="submit">Enregistrer les modifications</button><p class="employee-edit-note">Les changements seront enregistrés dans Supabase si vous êtes connecté comme administrateur.</p>
-  </form><div class="employee-detail-history"><h3>Historique récent</h3><p class="detail-loading">Chargement de l’historique…</p></div>`;
+  </form><div id="employeeDeviceRequests" class="employee-detail-history"><h3>Appareils des agents</h3><p class="detail-loading">Chargement des demandes…</p></div><div class="employee-detail-history"><h3>Historique récent</h3><p class="detail-loading">Chargement de l’historique…</p></div>`;
   const editForm=body.querySelector('#editEmployeeForm');
   editForm.addEventListener('submit',async event=>{
     event.preventDefault();
@@ -308,7 +308,9 @@ async function showEmployeeDetails(employeeId){
     }catch(err){console.error(err);showToast('Modification impossible : '+(err.message||'vérifiez les droits Supabase.'));saveButton.disabled=false;saveButton.textContent='Enregistrer les modifications';}
   });
   modal.classList.add("open");
-  const historyBox=body.querySelector(".employee-detail-history");
+  const deviceBox=body.querySelector('#employeeDeviceRequests');
+  if(emp.supabaseId|| (typeof emp.id==='string'&&emp.id.includes('-')))ppLoadDeviceRequests(emp.supabaseId||emp.id,deviceBox);
+  const historyBox=body.querySelectorAll(".employee-detail-history")[1];
   try{
     let rows=[];
     const realId=emp.supabaseId||((typeof emp.id==="string"&&emp.id.includes("-"))?emp.id:null);
@@ -761,6 +763,42 @@ async function claimEmployeeAccount(){
   }catch(e){showToast('Association impossible : '+(e.message||'code invalide ou déjà utilisé'));}
 }
 
+function ppDeviceId(){
+  const key='presencepro_device_id';
+  let id=localStorage.getItem(key);
+  if(!id){id=crypto.randomUUID();localStorage.setItem(key,id);}
+  return id;
+}
+function ppDeviceLabel(){
+  const ua=navigator.userAgent||'Navigateur';
+  const platform=/Android/i.test(ua)?'Android':/iPhone|iPad/i.test(ua)?'iPhone/iPad':/Windows/i.test(ua)?'Windows':/Mac/i.test(ua)?'Mac':'Appareil web';
+  return platform+' • '+(navigator.language||'fr');
+}
+async function ppEnsureDeviceAuthorized(){
+  if(!ppSupabase||!ppSession)throw new Error('Connectez-vous avec votre compte agent.');
+  const {data,error}=await ppSupabase.rpc('request_my_employee_device',{p_device_id:ppDeviceId(),p_device_label:ppDeviceLabel()});
+  if(error)throw error;
+  if(data?.status!=='active')throw new Error('Nouvel appareil en attente : demandez à votre administrateur de l’approuver avant de pointer.');
+  return true;
+}
+async function ppLoadDeviceRequests(employeeId,container){
+  if(!container||!ppSupabase||!ppSession||!ppOrganizationId)return;
+  try{
+    const {data,error}=await ppSupabase.from('employee_devices').select('device_id,device_label,status,requested_at').eq('employee_id',employeeId).eq('status','pending').order('requested_at',{ascending:false});
+    if(error)throw error;
+    container.innerHTML=(data||[]).length?'<h4>Demandes de changement de téléphone</h4>'+(data||[]).map(d=>'<div class="device-request-row"><span><strong>'+escapeHTML(d.device_label)+'</strong><small>En attente • '+new Date(d.requested_at).toLocaleString('fr-FR')+'</small></span><button type="button" class="primary-btn device-approve-btn" data-device-id="'+escapeHTML(d.device_id)+'">Approuver</button><button type="button" class="ghost-btn device-reject-btn" data-device-id="'+escapeHTML(d.device_id)+'">Refuser</button></div>').join(''):'<p class="employee-edit-note">Aucune demande de changement de téléphone.</p>';
+    container.querySelectorAll('.device-approve-btn,.device-reject-btn').forEach(btn=>btn.addEventListener('click',async()=>{
+      btn.disabled=true;
+      try{
+        const approve=btn.classList.contains('device-approve-btn');
+        const {error:reviewError}=await ppSupabase.rpc('admin_review_employee_device',{p_employee_id:employeeId,p_device_id:btn.dataset.deviceId,p_approve:approve});
+        if(reviewError)throw reviewError;
+        showToast(approve?'Nouvel appareil autorisé.':'Demande refusée.');
+        await ppLoadDeviceRequests(employeeId,container);
+      }catch(e){showToast('Action impossible : '+(e.message||'erreur'));btn.disabled=false;}
+    }));
+  }catch(e){container.innerHTML='<p class="employee-edit-note">Impossible de charger les demandes : '+escapeHTML(e.message||'erreur')+'</p>';}
+}
 function setKioskFeedback(kind,title,detail){
   const box=document.getElementById('kioskResult');if(!box)return;
   box.className='kiosk-result '+kind;
@@ -795,10 +833,11 @@ async function handleCompanyQr(text){
   let payload;try{payload=JSON.parse(text);}catch{setKioskFeedback('error','QR non reconnu','Ce code ne correspond pas à un QR PrésencePro.');showToast('QR PrésencePro non reconnu.');return;}
   if(payload.type!=='presencepro-company'||!payload.organization_id||!payload.token){setKioskFeedback('error','QR invalide','Le code est incomplet ou n’est pas un QR quotidien.');showToast('QR du jour invalide ou incomplet.');return;}
   if(!ppSupabase||!ppSession){setKioskFeedback('error','Connexion nécessaire','Connectez votre compte employé sur ce téléphone.');showToast('Connectez d’abord votre compte employé sur ce téléphone.');return;}
+  try{await ppEnsureDeviceAuthorized();}catch(deviceError){setKioskFeedback('error','Téléphone non autorisé',deviceError.message||'Demandez l’approbation de votre administrateur.');showToast(deviceError.message||'Appareil non autorisé.');return;}
   const {data:emp,error}=await ppSupabase.from('employees').select('id,full_name,code').eq('organization_id',payload.organization_id).eq('auth_user_id',ppSession.user.id).maybeSingle();
   if(error){setKioskFeedback('error','Vérification impossible','Un problème est survenu lors de la vérification de votre profil.');showToast(error.message||'Erreur de vérification du profil.');return;}
   if(!emp){setKioskFeedback('error','Profil non associé','Demandez à votre administrateur d’associer votre compte à votre fiche employé.');showToast('Aucun employé associé à ce compte dans cette entreprise.');return;}
-  const {data:result,error:recordError}=await ppSupabase.rpc('record_my_attendance_with_qr',{p_organization_id:payload.organization_id,p_token:payload.token});
+  const {data:result,error:recordError}=await ppSupabase.rpc('record_my_attendance_with_qr',{p_organization_id:payload.organization_id,p_token:payload.token,p_device_id:ppDeviceId()});
   if(recordError){
     const msg=(recordError.message||'').toLowerCase();
     const expired=msg.includes('token')||msg.includes('qr')||msg.includes('expired')||msg.includes('expire');
