@@ -76,9 +76,9 @@ async function ppLoadEmployees(){
   history.splice(0,history.length,...(att||[]).map(r=>{const emp=employeeMap.get(r.employee_id);return [ppDateLabel(r.attendance_date),emp?.full_name||'Employé supprimé',ppTime(r.arrival_at),ppTime(r.departure_at),r.arrival_at?ppAttendanceStatus(r.arrival_at):'absent'];}));
   renderRecent();renderEmployees();renderHistory();renderBiometric();ppRefreshDashboard();
 }
-async function ppCreateEmployee({name,code,department,photoFile}){
+async function ppCreateEmployee({name,email,code,department,photoFile}){
   const enrollmentCode='PP-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase();
-  const {data:e,error}=await ppSupabase.from('employees').insert({organization_id:ppOrganizationId,full_name:name,code,department,enrollment_code:enrollmentCode}).select().single();
+  const {data:e,error}=await ppSupabase.from('employees').insert({organization_id:ppOrganizationId,full_name:name,email:email.trim().toLowerCase(),code,department,enrollment_code:enrollmentCode}).select().single();
   if(error)throw error;
   let photoPath=null;
   if(photoFile){
@@ -390,6 +390,7 @@ function ppNextEmployeeMatricule(){
 document.getElementById("employeeForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const name=document.getElementById("newName").value.trim();
+  const email=document.getElementById("newEmail").value.trim().toLowerCase();
   const code=ppNextEmployeeMatricule();
   const department=document.getElementById("newDepartment").value;
   document.getElementById("newCode").value=code;
@@ -397,10 +398,10 @@ document.getElementById("employeeForm").addEventListener("submit",async e=>{
   let enrollmentCode=null;
   try{
     if(ppHasSupabase() && ppSession && ppOrganizationId){
-      enrollmentCode=await ppCreateEmployee({name,code,department,photoFile:photo});
+      enrollmentCode=await ppCreateEmployee({name,email,code,department,photoFile:photo});
     }else{
       const photoUrl=photo?URL.createObjectURL(photo):"";
-      employees.push({id:Date.now(),name,code,department,status:"absent",time:"—",initials:name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase(),photo:photoUrl,fingerprint:false,biometricId:null});
+      employees.push({id:Date.now(),name,email,code,department,status:"absent",time:"—",initials:name.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase(),photo:photoUrl,fingerprint:false,biometricId:null});
     }
     document.getElementById("employeeForm").reset();document.getElementById("photoPreview").innerHTML="<span>Aperçu photo</span>";modal.classList.remove("open");
     renderEmployees();renderRecent();renderBiometric();document.getElementById("totalEmployees").textContent=employees.length;
@@ -653,49 +654,53 @@ function closeEmployeeAccess(){
   if(m)m.classList.remove('open');
 }
 async function employeeLoginFromApp(){
-  const email=document.getElementById('employeeAccessEmail').value.trim();
+  const email=document.getElementById('employeeAccessEmail').value.trim().toLowerCase();
   const password=document.getElementById('employeeAccessPassword').value;
   const code=document.getElementById('employeeAccessCode').value.trim().toUpperCase();
   const status=document.getElementById('employeeAccessStatus');
+  if(!email||!password||!code){status.textContent='E-mail, mot de passe et matricule sont obligatoires.';return;}
   if(!ppHasSupabase()){status.textContent='Supabase n’est pas configuré.';return;}
   try{
     const {data,error}=await ppSupabase.auth.signInWithPassword({email,password});
     if(error)throw error;
     ppSession=data.session; employeePortalUser=data.user;
-    if(code){
-      const {error:claimErr}=await ppSupabase.rpc('employee_claim',{p_code:code});
-      if(claimErr)throw claimErr;
-    }
+    const {error:claimErr}=await ppSupabase.rpc('employee_claim_by_email_and_code',{p_email:email,p_employee_code:code});
+    if(claimErr)throw claimErr;
     await loadEmployeeIdentity();
-    status.textContent='✅ Compte connecté et profil employé chargé.';
-    showToast('Compte employé connecté.');
+    loadAgentHistory();loadMyLeaveRequests();
+    status.textContent='✅ E-mail et matricule vérifiés. Profil employé connecté.';
+    showToast('Compte agent identifié et connecté.');
     setTimeout(closeEmployeeAccess,700);
-  }catch(e){status.textContent='Connexion impossible : '+(e.message||'vérifiez vos informations.');}
+  }catch(e){
+    await ppSupabase.auth.signOut();
+    ppSession=null;employeePortalUser=null;
+    status.textContent='Connexion impossible : '+(e.message||'vérifiez votre e-mail, votre matricule et votre mot de passe.');
+  }
 }
 async function employeeCreateFromApp(){
   const name=document.getElementById('employeeAccessName').value.trim();
-  const email=document.getElementById('employeeAccessEmail').value.trim();
+  const email=document.getElementById('employeeAccessEmail').value.trim().toLowerCase();
   const password=document.getElementById('employeeAccessPassword').value;
   const code=document.getElementById('employeeAccessCode').value.trim().toUpperCase();
   const status=document.getElementById('employeeAccessStatus');
-  if(!email||!password||!code){status.textContent='Email, mot de passe et code d’association sont obligatoires.';return;}
+  if(!email||!password||!code){status.textContent='E-mail, mot de passe et matricule sont obligatoires.';return;}
   if(!ppHasSupabase()){status.textContent='Supabase n’est pas configuré.';return;}
   try{
     const {data,error}=await ppSupabase.auth.signUp({email,password,options:{data:{full_name:name||null,role:'employee'}}});
     if(error)throw error;
     if(!data.session){
-      status.textContent='Compte créé. Vérifiez votre email si la confirmation est activée, puis revenez ici et connectez-vous avec le même code.';
+      status.textContent='Compte créé. Consultez votre boîte e-mail et confirmez votre adresse. Revenez ensuite vous connecter avec votre e-mail, votre mot de passe et votre matricule.';
       return;
     }
     ppSession=data.session; employeePortalUser=data.user;
-    const {error:claimErr}=await ppSupabase.rpc('employee_claim',{p_code:code});
+    const {error:claimErr}=await ppSupabase.rpc('employee_claim_by_email_and_code',{p_email:email,p_employee_code:code});
     if(claimErr)throw claimErr;
     await loadEmployeeIdentity();
     loadAgentHistory();loadMyLeaveRequests();
-    status.textContent='✅ Compte créé et profil employé associé.';
-    showToast('Compte employé créé et associé.');
+    status.textContent='✅ Compte créé : e-mail et matricule vérifiés.';
+    showToast('Compte agent créé et profil associé.');
     setTimeout(closeEmployeeAccess,700);
-  }catch(e){status.textContent='Création impossible : '+(e.message||'code invalide ou déjà utilisé.');}
+  }catch(e){status.textContent='Création impossible : '+(e.message||'vérifiez les informations fournies par votre administrateur.');}
 }
 (function initEmployeeAccessUI(){
   const form=document.getElementById('employeeAccessForm'), create=document.getElementById('employeeCreateBtn');
@@ -741,10 +746,12 @@ async function loadEmployeeIdentity(){
 async function claimEmployeeAccount(){
   if(!ppHasSupabase()){showToast('Supabase doit être connecté.');return;}
   if(!ppSession){showToast('Connectez-vous d’abord avec le compte de l’employé.');return;}
-  const code=prompt('Entrez le code d’association fourni par votre administrateur :');
+  const email=prompt('E-mail professionnel enregistré par votre administrateur :');
+  if(!email)return;
+  const code=prompt('Votre matricule professionnel :');
   if(!code)return;
   try{
-    const {data,error}=await ppSupabase.rpc('employee_claim',{p_code:code.trim().toUpperCase()});
+    const {data,error}=await ppSupabase.rpc('employee_claim_by_email_and_code',{p_email:email.trim().toLowerCase(),p_employee_code:code.trim().toUpperCase()});
     if(error)throw error;
     showToast('✅ Téléphone associé à votre profil employé.');
     await loadEmployeeIdentity();
