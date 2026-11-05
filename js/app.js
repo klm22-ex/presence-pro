@@ -410,8 +410,7 @@ document.getElementById("employeeForm").addEventListener("submit",async e=>{
     document.getElementById("employeeForm").reset();document.getElementById("photoPreview").innerHTML="<span>Aperçu photo</span>";modal.classList.remove("open");
     renderEmployees();renderRecent();renderBiometric();document.getElementById("totalEmployees").textContent=employees.length;
     if(enrollmentCode){
-      window.prompt(`Profil de ${name} créé. Copiez et transmettez ce code à l’employé :`,enrollmentCode);
-      showToast(` ${name} a été ajouté. Conservez le code d’association.`);
+      showToast(`${name} a été ajouté. L’agent pourra créer son compte avec son e-mail et son matricule.`);
     }else{
       showToast(`${name} a été ajouté en mode démonstration.`);
     }
