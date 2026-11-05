@@ -730,8 +730,17 @@ async function loadEmployeeIdentity(){
   const box=document.getElementById('employeeIdentity'),profile=document.getElementById('agentProfileCard'),greeting=document.getElementById('agentGreeting');
   if(!ppSupabase||!employeePortalUser){
     if(box)box.innerHTML='<div class="person-avatar">?</div><div><strong>Non connecté</strong><small>Connectez votre compte employé.</small></div>';
-    if(profile)profile.innerHTML='<div class="agent-profile-empty">Connectez votre compte employé pour consulter votre profil.</div>';
-    if(greeting)greeting.textContent='👋';return;
+    if(profile)profile.innerHTML='<div class="agent-profile-main"><div class="agent-profile-photo">'+avatar+'</div><div class="agent-profile-name"><strong>'+name+'</strong><span>'+code+'</span></div><span class="agent-status '+(data.active===false?'inactive':'')+'">'+status+'</span></div><div class="agent-profile-details"><div><small>Département</small><strong>'+department+'</strong></div><div><small>Compte</small><strong>Vérifié à chaque pointage</strong></div></div>';
+  if(profile&&ppSupabase){
+    const deviceBox=document.createElement('div');deviceBox.className='agent-device-status';deviceBox.innerHTML='<small>Statut de ce téléphone</small><strong>Vérification…</strong>';profile.appendChild(deviceBox);
+    const {data:device,error:deviceError}=await ppSupabase.from('employee_devices').select('status,device_label').eq('employee_id',data.id).eq('device_id',ppDeviceId()).maybeSingle();
+    if(deviceError)deviceBox.innerHTML='<small>Statut de ce téléphone</small><strong>Indisponible pour le moment</strong>';
+    else if(!device)deviceBox.innerHTML='<small>Statut de ce téléphone</small><strong>Pas encore enregistré — le premier scan lancera l’enregistrement.</strong>';
+    else if(device.status==='active')deviceBox.innerHTML='<small>Statut de ce téléphone</small><strong>Téléphone autorisé.</strong>';
+    else if(device.status==='pending')deviceBox.innerHTML='<small>Statut de ce téléphone</small><strong>Demande en attente d’approbation de l’administrateur.</strong>';
+    else deviceBox.innerHTML='<small>Statut de ce téléphone</small><strong>Ce téléphone n’est pas autorisé. Demandez une nouvelle approbation.</strong>';
+  }
+  if(greeting)greeting.textContent='👋';return;
   }
   const {data,error}=await ppSupabase.from('employees').select('id,full_name,code,department,photo_path,active').eq('auth_user_id',employeePortalUser.id).maybeSingle();
   if(error||!data){
