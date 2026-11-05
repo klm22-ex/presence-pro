@@ -220,8 +220,16 @@ async function loadAgentHistory(){
   }catch(e){body.innerHTML=`<tr><td colspan="4" style="text-align:center;padding:28px;color:#b45309">Impossible de charger l’historique.</td></tr>`;}
 }
 function navigateTo(id){
+  const agentSections=['agentHome','agentHistory','kiosk'];
+  const shell=document.getElementById('appShell');
+  if(shell?.classList.contains('mode-agent')&&!agentSections.includes(id)){
+    showToast('Cette rubrique est réservée à l’administration.');
+    id='agentHome';
+  }
+  const target=document.getElementById(id);
+  if(!target)return;
   document.querySelectorAll(".page-section").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
+  target.classList.add("active");
   document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.section===id));
   const titles={dashboard:"Tableau de bord",employees:"Employés",attendance:"Pointage",biometric:"Biométrie",history:"Historique",reports:"Rapports",leaveRequests:"Congés & absences",kiosk:"Mode Pointage",settings:"Paramètres",agentHome:"Espace agent",agentHistory:"Mon historique"};
   document.getElementById("pageTitle").textContent=titles[id]||"PrésencePro";
@@ -703,7 +711,13 @@ async function employeeCreateFromApp(){
     status.textContent='✅ Compte créé : e-mail et matricule vérifiés.';
     showToast('Compte agent créé et profil associé.');
     setTimeout(closeEmployeeAccess,700);
-  }catch(e){status.textContent='Création impossible : '+(e.message||'vérifiez les informations fournies par votre administrateur.');}
+  }catch(e){
+    if(ppSession){
+      try{await ppSupabase.auth.signOut();}catch{}
+      ppSession=null;employeePortalUser=null;
+    }
+    status.textContent='Création impossible : '+(e.message||'vérifiez les informations fournies par votre administrateur.');
+  }
 }
 (function initEmployeeAccessUI(){
   const form=document.getElementById('employeeAccessForm'), create=document.getElementById('employeeCreateBtn');
