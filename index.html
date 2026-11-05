@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261105-devices1" />
+  <link rel="stylesheet" href="css/style.css?v=20261105-agentnav2" />
 </head>
 <body>
   <div class="landing" id="landingPage">
@@ -87,7 +87,7 @@
             <button class="primary-btn" onclick="navigateTo('kiosk')">📷 Scanner le QR</button>
           </div>
           <article class="panel agent-profile-panel"><div class="panel-head"><div><h2>Mon profil</h2><p>Vos informations employé enregistrées dans l’entreprise.</p></div><span class="profile-lock">🔒 Personnel</span></div><div id="agentProfileCard" class="agent-profile-card"><div class="agent-profile-empty">Connectez votre compte employé pour consulter votre profil.</div></div><div class="agent-profile-footer"><span>Gardez votre compte personnel confidentiel.</span><button class="ghost-btn" type="button" onclick="agentSignOut()">↪ Se déconnecter</button></div></article>
-          <div class="role-grid agent-actions-grid"
+          <div class="role-grid agent-actions-grid">
             <button class="role-card agent-action" onclick="navigateTo('kiosk')"><div class="role-icon">📷</div><div><strong>Pointer ma présence</strong><span>Scanner le QR de l'entreprise puis confirmer votre identité.</span></div><b>→</b></button>
             <button class="role-card agent-action" onclick="navigateTo('agentHistory')"><div class="role-icon">▤</div><div><strong>Mon historique</strong><span>Consulter mes arrivées, départs et pointages récents.</span></div><b>→</b></button>
             <button class="role-card agent-action" onclick="openEmployeeAccess()"><div class="role-icon">♙</div><div><strong>Mon compte</strong><span>Se connecter ou associer son profil employé.</span></div><b>→</b></button>
@@ -313,7 +313,7 @@
       <button class="modal-close" type="button" onclick="closeEmployeeAccess()">×</button>
       <p class="eyebrow">ESPACE EMPLOYÉ</p>
       <h2>Accéder à mon pointage</h2>
-      <p class="modal-subtitle">Créez ou connectez votre compte, puis associez-le à votre matricule avec le code fourni par l’administrateur.</p>
+      <p class="modal-subtitle">Créez ou connectez votre compte, puis associez-le à votre matricule communiqué par l’administrateur.</p>
       <form id="employeeAccessForm">
         <label>Nom complet <input id="employeeAccessName" placeholder="Ex. Kayowa Mulumba"></label>
         <label>Email <input id="employeeAccessEmail" type="email" required placeholder="vous@entreprise.com"></label>
