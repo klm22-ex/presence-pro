@@ -655,10 +655,31 @@ ppInit();
 
 /* === V7 : téléphone personnel + QR entreprise === */
 let qrScanner = null;
-function openEmployeeAccess(mode){
+let employeeAccessMode='login';
+function setEmployeeAccessMode(mode){
+  employeeAccessMode=mode==='create'?'create':'login';
+  const creating=employeeAccessMode==='create';
+  const title=document.getElementById('employeeAccessTitle');
+  const subtitle=document.getElementById('employeeAccessSubtitle');
+  const nameLabel=document.getElementById('employeeAccessNameLabel');
+  const nameInput=document.getElementById('employeeAccessName');
+  const submit=document.getElementById('employeeAccessSubmit');
+  const toggle=document.getElementById('employeeAccessToggle');
+  const password=document.getElementById('employeeAccessPassword');
+  if(title)title.textContent=creating?'Créer mon compte agent':'Se connecter';
+  if(subtitle)subtitle.textContent=creating?'Utilisez l’e-mail et le matricule que l’administrateur a enregistrés pour vous.':'Connectez-vous avec l’adresse e-mail, le mot de passe et le matricule associés à votre profil.';
+  if(nameLabel)nameLabel.hidden=!creating;
+  if(nameInput)nameInput.required=creating;
+  if(submit)submit.textContent=creating?'Créer mon compte':'Se connecter';
+  if(toggle)toggle.textContent=creating?'J’ai déjà un compte ? Se connecter':'Pas encore de compte ? Créer mon compte';
+  if(password)password.autocomplete=creating?'new-password':'current-password';
+  const status=document.getElementById('employeeAccessStatus');
+  if(status)status.textContent='';
+}
+function openEmployeeAccess(mode='login'){
   const m=document.getElementById('employeeAccessModal');
   if(m)m.classList.add('open');
-  const status=document.getElementById('employeeAccessStatus'); if(status)status.textContent='';
+  setEmployeeAccessMode(mode);
 }
 function closeEmployeeAccess(){
   const m=document.getElementById('employeeAccessModal');
@@ -720,10 +741,16 @@ async function employeeCreateFromApp(){
   }
 }
 (function initEmployeeAccessUI(){
-  const form=document.getElementById('employeeAccessForm'), create=document.getElementById('employeeCreateBtn');
-  if(!form||!create)return;
-  form.addEventListener('submit',e=>{e.preventDefault();employeeLoginFromApp();});
-  create.addEventListener('click',employeeCreateFromApp);
+  const form=document.getElementById('employeeAccessForm');
+  const toggle=document.getElementById('employeeAccessToggle');
+  if(!form||!toggle)return;
+  form.addEventListener('submit',e=>{
+    e.preventDefault();
+    if(employeeAccessMode==='create')employeeCreateFromApp();
+    else employeeLoginFromApp();
+  });
+  toggle.addEventListener('click',()=>setEmployeeAccessMode(employeeAccessMode==='create'?'login':'create'));
+  setEmployeeAccessMode('login');
 })();
 
 function employeeSignIn(){
