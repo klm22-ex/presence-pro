@@ -655,10 +655,18 @@ ppInit();
 
 /* === V7 : téléphone personnel + QR entreprise === */
 let qrScanner = null;
-function openEmployeeAccess(){
+function openEmployeeAccess(mode='login'){
   const m=document.getElementById('employeeAccessModal');
   if(m)m.classList.add('open');
   const status=document.getElementById('employeeAccessStatus'); if(status)status.textContent='';
+  const name=document.getElementById('employeeAccessName');
+  const nameLabel=name?.closest('label');
+  if(nameLabel)nameLabel.hidden=mode!=='create';
+  const create=document.getElementById('employeeCreateBtn');
+  const submit=document.querySelector('#employeeAccessForm button[type="submit"]');
+  if(create)create.hidden=mode==='login';
+  if(submit)submit.textContent=mode==='create'?'Déjà un compte ? Se connecter':'Se connecter';
+  if(submit)submit.onclick=mode==='create'?(e)=>{e.preventDefault();openEmployeeAccess('login');}:null;
 }
 function closeEmployeeAccess(){
   const m=document.getElementById('employeeAccessModal');
