@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261105-agent-authmodes" />
+  <link rel="stylesheet" href="css/style.css?v=20261105-agent-session" />
 </head>
 <body>
   <div class="landing" id="landingPage">
@@ -83,7 +83,7 @@
       <div class="content">
         <section class="page-section" id="agentHome">
           <div class="agent-hero">
-            <div><p class="eyebrow">ESPACE AGENT</p><h1>Bienvenue dans votre espace</h1><p>Connectez-vous à votre compte ou créez-en un avec les informations fournies par votre administrateur.</p><div class="agent-access-actions"><button class="primary-btn" type="button" onclick="openEmployeeAccess('create')">＋ Créer mon compte</button><button class="secondary-btn" type="button" onclick="openEmployeeAccess('login')">🔑 Se connecter</button></div></div>
+            <div><p class="eyebrow">ESPACE AGENT</p><h1>Bienvenue dans votre espace</h1><p>Connectez-vous à votre compte ou créez-en un avec les informations fournies par votre administrateur.</p><div class="agent-access-actions" id="agentAccessActions"><button class="primary-btn" type="button" onclick="openEmployeeAccess('create')">＋ Créer mon compte</button><button class="secondary-btn" type="button" onclick="openEmployeeAccess('login')">🔑 Se connecter</button></div></div>
             <button class="primary-btn" onclick="navigateTo('kiosk')">📷 Scanner le QR</button>
           </div>
           <article class="panel agent-profile-panel"><div class="panel-head"><div><h2>Mon profil</h2><p>Vos informations employé enregistrées dans l’entreprise.</p></div><span class="profile-lock">🔒 Personnel</span></div><div id="agentProfileCard" class="agent-profile-card"><div class="agent-profile-empty">Connectez votre compte employé pour consulter votre profil.</div></div><div class="agent-profile-footer"><span>Gardez votre compte personnel confidentiel.</span><button class="ghost-btn" type="button" onclick="agentSignOut()">↪ Se déconnecter</button></div></article>
@@ -349,6 +349,6 @@
   <script src="js/supabase-config.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="js/app.js?v=20261105-agent-authmodes"></script>
+  <script src="js/app.js?v=20261105-agent-session"></script>
 </body>
 </html>
