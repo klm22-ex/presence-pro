@@ -336,3 +336,9 @@ button:focus-visible,.nav-item:focus-visible,a:focus-visible{outline:3px solid r
 .agent-profile-footer span{font-size:11px;color:#8491a3}
 .agent-profile-footer .ghost-btn{white-space:nowrap}
 @media(max-width:520px){.agent-profile-footer{align-items:flex-start;flex-direction:column}.agent-profile-footer .ghost-btn{width:100%}}
+
+/* Appareils agents */
+.device-request-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--border,#e5eaf0)}
+.device-request-row>span{display:flex;flex:1;min-width:150px;flex-direction:column;gap:4px}
+.device-request-row small{color:var(--muted,#718096);font-size:12px}
+.device-request-row .primary-btn,.device-request-row .ghost-btn{padding:8px 12px;font-size:12px}
