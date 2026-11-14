@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261105-agent-session" />
+  <link rel="stylesheet" href="css/style.css?v=20261114-agent-password-recovery" />
 </head>
 <body>
   <div class="landing" id="landingPage">
@@ -308,6 +308,20 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="employeePasswordRecoveryModal">
+    <div class="modal auth-modal">
+      <p class="eyebrow">SÉCURITÉ DU COMPTE</p>
+      <h2>Réinitialiser le mot de passe</h2>
+      <p class="modal-subtitle">Choisissez un nouveau mot de passe pour votre compte agent.</p>
+      <form id="employeePasswordRecoveryForm">
+        <label>Nouveau mot de passe<input id="employeeNewPassword" type="password" minlength="8" required autocomplete="new-password" placeholder="8 caractères minimum"></label>
+        <label>Confirmer le mot de passe<input id="employeeConfirmPassword" type="password" minlength="8" required autocomplete="new-password" placeholder="Répétez le mot de passe"></label>
+        <button class="primary-btn full" id="employeePasswordRecoverySubmit" type="submit">Enregistrer le nouveau mot de passe</button>
+      </form>
+      <p id="employeePasswordRecoveryStatus" class="security-note"></p>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="employeeAccessModal">
     <div class="modal auth-modal">
       <button class="modal-close" type="button" onclick="closeEmployeeAccess()">×</button>
@@ -321,7 +335,8 @@
         <label>Matricule <input id="employeeAccessCode" required autocomplete="off" placeholder="Ex. 001"></label>
         <button class="primary-btn full" id="employeeAccessSubmit" type="submit">Se connecter</button>
       </form>
-      <button class="ghost-btn full" id="employeeAccessToggle" type="button">Pas encore de compte ? Créer mon compte</button>
+      <button class="text-btn full" id="employeeForgotPassword" type="button">Mot de passe oublié ?</button>
+    <button class="ghost-btn full" id="employeeAccessToggle" type="button">Pas encore de compte ? Créer mon compte</button>
       <p id="employeeAccessStatus" class="security-note"></p>
     </div>
   </div>
@@ -349,6 +364,6 @@
   <script src="js/supabase-config.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="js/app.js?v=20261105-agent-session"></script>
+  <script src="js/app.js?v=20261114-agent-password-recovery"></script>
 </body>
 </html>
