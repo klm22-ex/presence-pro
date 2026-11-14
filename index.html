@@ -45,7 +45,6 @@
         <button class="nav-item" data-section="employees"><span>♙</span> Employés</button>
         <button class="nav-item" data-section="attendance"><span>◷</span> Pointage</button>
         <button class="nav-item" data-section="kiosk"><span>▣</span> Mode Pointage</button>
-        <button class="nav-item" data-section="biometric"><span>◉</span> Biométrie</button>
         <button class="nav-item" data-section="history"><span>▤</span> Historique</button>
         <button class="nav-item" data-section="reports"><span>▥</span> Rapports</button>
         <button class="nav-item" data-section="leaveRequests"><span>▦</span> Congés & absences</button>
@@ -198,40 +197,12 @@
               <div class="panel-head"><div><h2>Votre identité</h2><p>Le téléphone doit être associé au compte de l’employé.</p></div></div>
               <div class="identity-card" id="employeeIdentity"><div class="person-avatar">?</div><div><strong>Non connecté</strong><small>Connectez le compte employé</small></div></div>
               <button class="secondary-btn full" onclick="openEmployeeAccess()">🔑 Accès employé</button>
-              <div class="secure-note">🔒 Le compte personnel identifie l’agent. Le QR quotidien confirme sa présence sur le site.<button class="ghost-btn full" onclick="claimEmployeeAccount()">🔗 Associer ce téléphone à mon profil</button>
+              <div class="secure-note">🔒 Le compte personnel identifie l’agent. Le QR quotidien confirme sa présence sur le site.
             </article>
           </div>
           <article class="panel kiosk-admin-card"><div><p class="eyebrow">ADMINISTRATEUR</p><h2>QR quotidien de votre entreprise</h2><p>Ce QR est créé automatiquement pour la journée et expire à minuit (heure de Kinshasa).</p></div><div id="companyQr" class="company-qr"><span>QR du jour</span></div><button class="ghost-btn" onclick="showCompanyQr()">Afficher le QR du jour</button></article>
         </section>
 
-        <section class="page-section" id="biometric">
-          <div class="section-heading"><div><p class="eyebrow">IDENTITÉ BIOMÉTRIQUE</p><h1>Pointage par empreinte</h1><p>Associez une empreinte à chaque agent et vérifiez son identité avant le pointage.</p></div></div>
-          <div class="bio-layout">
-            <article class="panel fingerprint-panel">
-              <div class="fingerprint-visual"><div class="fingerprint-icon">⌁</div><span id="fingerprintState">PRÊT À VÉRIFIER</span></div>
-              <h2>Biométrie de la tablette</h2>
-              <p class="muted">PrésencePro utilise la sécurité biométrique native de la tablette ou du téléphone : empreinte digitale, Face ID ou autre authentificateur compatible.</p>
-              <div class="device-status"><span class="status-dot" id="deviceDot"></span><div><strong id="deviceStatus">Vérification de l’appareil…</strong><small id="deviceStatusSmall">WebAuthn / authentification native</small></div></div>
-              <button class="primary-btn full" id="verifyBiometricBtn" onclick="verifyBiometric()">👆 S’identifier par biométrie</button>
-              <p class="security-note">🔐 PrésencePro ne reçoit pas l’empreinte de l’agent. Le système de la tablette effectue la vérification et renvoie une preuve cryptographique.</p>
-            </article>
-            <article class="panel biometric-list">
-              <div class="panel-head"><div><h2>Profils des agents</h2><p>Chaque agent possède une photo et peut enregistrer la biométrie de son appareil.</p></div></div>
-              <div class="bio-enroll-box">
-                <label for="biometricEmployee">Agent à enregistrer</label>
-                <select id="biometricEmployee"></select>
-                <button class="secondary-btn full" onclick="registerBiometric()">＋ Enregistrer cet appareil</button>
-                <small>À faire une fois par appareil de pointage et par agent.</small>
-              </div>
-              <div id="biometricTable"></div>
-            </article>
-          </div>
-
-          <article class="panel kiosk-panel">
-            <div><p class="eyebrow">MODE BORNE</p><h2>Pointage rapide sur tablette</h2><p>Une tablette peut rester ouverte sur cet écran. L’agent appuie sur le bouton, utilise la biométrie de la tablette et son profil est identifié.</p></div>
-            <button class="primary-btn" onclick="verifyBiometric()">👆 Pointer ma présence</button>
-          </article>
-        </section>
 
         <section class="page-section" id="agentHistory">
           <div class="section-heading"><div><p class="eyebrow">ESPACE AGENT</p><h1>Mon historique</h1><p>Consultez uniquement vos propres pointages.</p></div><button class="ghost-btn" onclick="navigateTo('kiosk')">📷 Nouveau pointage</button></div>
