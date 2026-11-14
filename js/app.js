@@ -121,7 +121,7 @@ async function ppInit(){
   await ppBootCloud();
 }
 async function ppBootCloud(){
-  try{await ppLoadOrganization();await ppLoadEmployees();await ppLoadBiometricCredentials();await ppLoadOrganizationSettings();await loadLeaveRequests();renderBiometric();}
+  try{await ppLoadOrganization();await ppLoadEmployees();await ppLoadOrganizationSettings();await loadLeaveRequests();}
   catch(err){console.error(err);showToast('Connexion Supabase : '+(err.message||'erreur'));}
 }
 const employees = [
