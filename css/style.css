@@ -349,3 +349,5 @@ button:focus-visible,.nav-item:focus-visible,a:focus-visible{outline:3px solid r
 
 /* Etat du compte agent */
 .agent-connected{display:inline-flex;align-items:center;gap:8px;padding:11px 14px;border-radius:12px;background:#eaf7ef;color:#167344;font-weight:700;font-size:14px;}
+
+.text-btn{display:block;border:0;background:transparent;color:#315fce;font:600 14px Inter,Arial,sans-serif;padding:10px;cursor:pointer}.text-btn:disabled{opacity:.6;cursor:wait}
