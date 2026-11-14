@@ -685,6 +685,54 @@ function closeEmployeeAccess(){
   const m=document.getElementById('employeeAccessModal');
   if(m)m.classList.remove('open');
 }
+async function requestEmployeePasswordReset(){
+  const email=document.getElementById('employeeAccessEmail').value.trim().toLowerCase();
+  const status=document.getElementById('employeeAccessStatus');
+  if(!email){status.textContent='Saisissez d’abord votre adresse e-mail.';document.getElementById('employeeAccessEmail').focus();return;}
+  if(!ppHasSupabase()){status.textContent='Supabase n’est pas configuré.';return;}
+  const button=document.getElementById('employeeForgotPassword');
+  if(button){button.disabled=true;button.textContent='Envoi en cours…';}
+  try{
+    const {error}=await ppSupabase.auth.resetPasswordForEmail(email,{redirectTo:'https://klm22-ex.github.io/presence-pro/'});
+    if(error)throw error;
+    status.textContent='Si cette adresse correspond à un compte, un lien de réinitialisation vient d’être envoyé. Vérifiez aussi vos courriers indésirables.';
+  }catch(e){status.textContent='Envoi impossible : '+(e.message||'réessayez plus tard.');}
+  finally{if(button){button.disabled=false;button.textContent='Mot de passe oublié ?';}}
+}
+function initEmployeePasswordRecovery(){
+  const form=document.getElementById('employeePasswordRecoveryForm');
+  const modal=document.getElementById('employeePasswordRecoveryModal');
+  if(form)form.addEventListener('submit',async event=>{
+    event.preventDefault();
+    const password=document.getElementById('employeeNewPassword').value;
+    const confirmPassword=document.getElementById('employeeConfirmPassword').value;
+    const status=document.getElementById('employeePasswordRecoveryStatus');
+    const button=document.getElementById('employeePasswordRecoverySubmit');
+    if(password.length<8){status.textContent='Le mot de passe doit contenir au moins 8 caractères.';return;}
+    if(password!==confirmPassword){status.textContent='Les deux mots de passe ne correspondent pas.';return;}
+    button.disabled=true;button.textContent='Enregistrement…';
+    try{
+      const {error}=await ppSupabase.auth.updateUser({password});
+      if(error)throw error;
+      status.textContent='Mot de passe modifié. Vous pouvez maintenant vous connecter.';
+      await ppSupabase.auth.signOut();
+      ppSession=null;employeePortalUser=null;
+      setTimeout(()=>{if(modal)modal.classList.remove('open');openEmployeeAccess('login');},900);
+    }catch(e){status.textContent='Modification impossible : '+(e.message||'le lien est peut-être expiré.');}
+    finally{button.disabled=false;button.textContent='Enregistrer le nouveau mot de passe';}
+  });
+  if(ppSupabase){
+    ppSupabase.auth.onAuthStateChange((event,session)=>{
+      if(event==='PASSWORD_RECOVERY'){
+        ppSession=session||null;
+        if(modal)modal.classList.add('open');
+        const status=document.getElementById('employeePasswordRecoveryStatus');
+        if(status)status.textContent='Lien vérifié. Définissez votre nouveau mot de passe.';
+      }
+    });
+  }
+}
+document.addEventListener('DOMContentLoaded',initEmployeePasswordRecovery);
 async function employeeLoginFromApp(){
   const email=document.getElementById('employeeAccessEmail').value.trim().toLowerCase();
   const password=document.getElementById('employeeAccessPassword').value;
@@ -743,7 +791,9 @@ async function employeeCreateFromApp(){
 (function initEmployeeAccessUI(){
   const form=document.getElementById('employeeAccessForm');
   const toggle=document.getElementById('employeeAccessToggle');
+  const forgot=document.getElementById('employeeForgotPassword');
   if(!form||!toggle)return;
+  if(forgot)forgot.addEventListener('click',requestEmployeePasswordReset);
   form.addEventListener('submit',e=>{
     e.preventDefault();
     if(employeeAccessMode==='create')employeeCreateFromApp();
