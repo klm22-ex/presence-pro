@@ -351,3 +351,114 @@ button:focus-visible,.nav-item:focus-visible,a:focus-visible{outline:3px solid r
 .agent-connected{display:inline-flex;align-items:center;gap:8px;padding:11px 14px;border-radius:12px;background:#eaf7ef;color:#167344;font-weight:700;font-size:14px;}
 
 .text-btn{display:block;border:0;background:transparent;color:#315fce;font:600 14px Inter,Arial,sans-serif;padding:10px;cursor:pointer}.text-btn:disabled{opacity:.6;cursor:wait}
+
+
+/* === Direction artistique 2026 : outil métier sobre, chaleureux et distinctif === */
+:root{
+ --navy:#18352f;--navy-2:#23483f;--blue:#28745f;--blue-soft:#e8f1ec;
+ --green:#28745f;--green-soft:#e8f1ec;--orange:#b66a3c;--orange-soft:#f7eee7;
+ --red:#b84f46;--red-soft:#f8ece9;--bg:#f3f2ed;--white:#fffefa;--text:#252e2a;
+ --muted:#737c75;--border:#e2e1d9;--shadow:0 3px 14px rgba(33,45,37,.045);
+ --pp-ink:#20332d;--pp-muted:#737c75;--pp-line:#e3e1d9;--pp-blue:#28745f;--pp-surface:#fffefa;--pp-soft:#f7f6f1;
+ --ease-out:cubic-bezier(.2,.75,.25,1);
+}
+body{font-family:"IBM Plex Sans",Inter,system-ui,sans-serif;background:#f3f2ed;color:#252e2a}
+.sidebar{background:#203a33;padding:25px 16px 18px}
+.brand-mark{border-radius:9px;background:#e9eee8;color:#24483d}
+.nav-label{color:#9daf9f}
+.nav-item{border-radius:7px;color:#c4d0c7;padding:11px 12px;transition:background .2s ease,color .2s ease,transform .2s ease}
+.nav-item:hover{transform:translateX(2px);background:#2b4b40}
+.nav-item.active{background:#31584a;box-shadow:inset 3px 0 #d2a17c}
+.main{background:#f3f2ed}
+.topbar{background:#fffefa;border-bottom-color:#e4e2da;box-shadow:none}
+.content{padding-top:29px}
+.hero h1,.section-heading h1{color:#20332d;letter-spacing:-.9px}
+.eyebrow,.section-heading .eyebrow{color:#8b674f;letter-spacing:1.2px}
+.primary-btn{background:#28745f;color:#fff;border-radius:7px;box-shadow:0 2px 0 #1d5948;transition:transform .18s ease,background .18s ease,box-shadow .18s ease}
+.primary-btn:hover{background:#22634f;transform:translateY(-2px);box-shadow:0 4px 0 #1d5948}
+.primary-btn:active,.check-btn:active{transform:translateY(1px);box-shadow:none}
+.ghost-btn{border-radius:7px;background:#fffefa;border-color:#deded5;color:#4f5d55;transition:background .18s ease,border-color .18s ease,transform .18s ease}
+.ghost-btn:hover{background:#f0f2eb;border-color:#b8c9bd;transform:translateY(-1px)}
+.stat-card,.panel,.chart-card,.report-card{background:#fffefa;border:1px solid #e4e2da;border-radius:9px;box-shadow:0 2px 9px rgba(35,48,40,.035)}
+.stat-card{padding:17px}
+.stat-icon{border-radius:8px}
+.stat-icon.blue{background:#e8f1ec;color:#28745f}
+.stat-icon.green{background:#e8f1ec;color:#28745f}
+.stat-icon.orange{background:#f7eee7;color:#a9633b}
+.stat-icon.red{background:#f8ece9;color:#b84f46}
+.panel-head{border-bottom:1px solid #eeece5}
+.table-wrap thead th,th{background:#f6f5ef;color:#777f76}
+.table-wrap tbody tr:hover{background:#f7f7f1}
+.status{border-radius:4px}
+.date-pill{border-radius:6px;background:#f5f4ee;border-color:#e4e2da}
+.search{border-radius:7px;background:#fffefa;border-color:#e1dfd6}
+.toolbar{background:#fffefa}
+.toolbar select,.toolbar input,.date-input{border-radius:7px}
+.attendance-card{background:#fffefa;border-radius:12px;box-shadow:0 4px 18px rgba(35,48,40,.045)}
+.clock{color:#28745f;text-shadow:none}
+.attendance-form input,.modal input,.modal select{border-radius:7px}
+.modal{border-radius:12px;background:#fffefa}
+.toast{border-radius:7px;background:#203a33;backdrop-filter:none}
+.landing{position:relative;isolation:isolate;overflow:hidden;background:#e9e9df}
+.landing:before,.landing:after{display:none}
+.landing-card{width:min(900px,100%);padding:clamp(28px,5vw,54px);border:1px solid #deded3;border-radius:12px;background:#fffefa;box-shadow:0 12px 35px rgba(40,50,40,.08);animation:ppRise .55s var(--ease-out) both}
+.landing-card:before{height:4px;background:#b87953}
+.landing-brand .brand-mark{width:44px;height:44px;border-radius:9px;background:#203a33;color:#fff;box-shadow:none}
+.landing-brand strong{font-size:19px;letter-spacing:-.4px;color:#20332d}
+.landing-brand span{color:#9a765e;letter-spacing:1.5px}
+.landing .eyebrow{padding:0;border:0;background:none;border-radius:0;color:#987052}
+.landing .eyebrow:before{display:none}
+.landing h1{max-width:620px;font-size:clamp(34px,5vw,52px);line-height:1.06;letter-spacing:-1.7px;color:#20332d}
+.landing h1 span{color:#28745f;background:none;-webkit-text-fill-color:initial}
+.landing-subtitle{max-width:580px;color:#727a72;font-size:15px;line-height:1.75}
+.role-grid{gap:12px}
+.role-card{min-height:112px;border:1px solid #e4e2da;border-radius:9px;background:#fffefa;box-shadow:none;padding:18px;transition:transform .22s var(--ease-out),border-color .22s ease,box-shadow .22s ease}
+.role-card:hover{transform:translateY(-3px);border-color:#a8bcae;box-shadow:0 9px 20px rgba(35,48,40,.07)}
+.role-card strong{color:#20332d;font-size:15px}
+.role-card span{color:#737c75;font-size:12px}
+.role-icon{width:42px;height:42px;border-radius:8px;background:#edf1e9!important;color:#28745f!important}
+.role-card b{background:#f2f1ea;color:#28745f}
+.role-card:hover b{background:#e5eee7}
+.landing-note{justify-content:flex-start;color:#858b82;font-size:11px}
+.auth-modal{border-radius:12px;background:#fffefa;box-shadow:0 18px 55px rgba(18,35,28,.2)}
+.auth-modal:before{background:#b87953}
+.auth-modal .eyebrow{border-radius:4px;background:#f4eee7;color:#966c4f}
+.auth-modal h2{color:#20332d}
+.auth-modal .primary-btn{background:#28745f;box-shadow:0 2px 0 #1d5948;border-radius:7px}
+.auth-modal input{border-radius:7px;background:#fffefa}
+.mode-agent .main{background:#f3f2ed}
+.mode-agent .agent-hero{border:1px solid #e1dfd6;border-radius:10px;background:#fffefa;box-shadow:none}
+.mode-agent .agent-hero:after{display:none}
+.mode-agent .agent-hero h1{color:#20332d}
+.mode-agent .agent-action,.mode-agent .agent-summary,.mode-agent .agent-leave-panel,.mode-agent .kiosk-grid>.panel{border-radius:9px;box-shadow:0 2px 9px rgba(35,48,40,.035);border-color:#e4e2da}
+.mode-agent .agent-action:nth-child(1) .role-icon,.mode-agent .agent-action:nth-child(2) .role-icon,.mode-agent .agent-action:nth-child(3) .role-icon{background:#edf1e9;color:#28745f}
+.mode-agent #kiosk .section-heading{border-radius:9px;background:#fffefa;border-color:#e4e2da}
+.mode-agent .qr-reader{border-radius:9px;background:#f7f6f1}
+.mode-agent .qr-step{border-radius:7px;background:#f7f6f1}
+.mode-agent .kiosk-result,.mode-agent .identity-card{border-radius:8px}
+:focus-visible{outline:3px solid rgba(40,116,95,.35);outline-offset:2px}
+button:disabled{cursor:not-allowed}
+@keyframes ppRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ppSoftEnter{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ppAccentPulse{0%,100%{box-shadow:0 0 0 0 rgba(40,116,95,0)}50%{box-shadow:0 0 0 5px rgba(40,116,95,.09)}}
+@media(prefers-reduced-motion:no-preference){
+ .page-section.active .hero,.page-section.active .section-heading{animation:ppSoftEnter .38s var(--ease-out) both}
+ .page-section.active .stat-card{animation:ppSoftEnter .4s var(--ease-out) both}
+ .page-section.active .stat-card:nth-child(2){animation-delay:45ms}
+ .page-section.active .stat-card:nth-child(3){animation-delay:90ms}
+ .page-section.active .stat-card:nth-child(4){animation-delay:135ms}
+ .page-section.active .panel{animation:ppSoftEnter .42s .08s var(--ease-out) both}
+ .nav-item.active{animation:ppAccentPulse .5s ease-out}
+ .role-card:active{transform:scale(.99)}
+ .agent-profile-photo,.person-photo{transition:transform .25s ease,box-shadow .25s ease}
+ .agent-profile-photo:hover,.person-photo:hover{transform:scale(1.045);box-shadow:0 5px 15px rgba(32,58,51,.14)}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+@media(max-width:760px){
+ .landing{background:#e9e9df}
+ .landing-card{border-radius:10px}
+ .role-grid{grid-template-columns:1fr}
+ .landing-note{line-height:1.5}
+}
