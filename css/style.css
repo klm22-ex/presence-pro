@@ -462,3 +462,85 @@ button:disabled{cursor:not-allowed}
  .role-grid{grid-template-columns:1fr}
  .landing-note{line-height:1.5}
 }
+
+
+/* === PrésencePro : inspiration verre dépoli / relief doux, adaptée à un outil RH === */
+:root{
+ --pp-ink:#142344;--pp-muted:#64748b;--pp-line:#dce5f2;--pp-blue:#245de8;
+ --pp-surface:#f8fbff;--pp-soft:#edf3fc;--pp-shadow:0 12px 30px rgba(43,82,151,.10);
+}
+body{background:#edf3fc;color:#142344}
+.landing{
+ background:radial-gradient(ellipse at 50% 15%,rgba(255,255,255,.98) 0%,rgba(241,247,255,.94) 43%,#e6efff 100%);
+}
+.landing:before,.landing:after{display:block;content:"";position:absolute;z-index:-1;border-radius:50%;pointer-events:none}
+.landing:before{width:360px;height:360px;left:-210px;top:-190px;border:1px solid rgba(255,255,255,.95);box-shadow:inset -12px -12px 25px rgba(63,119,230,.13),12px 12px 35px rgba(63,119,230,.10)}
+.landing:after{width:300px;height:300px;right:-180px;bottom:-175px;border:1px solid rgba(255,255,255,.95);box-shadow:inset 10px 10px 25px rgba(63,119,230,.12),-10px -10px 30px rgba(255,255,255,.9)}
+.landing-card{
+ max-width:920px;border:1px solid rgba(255,255,255,.9);border-radius:26px;
+ background:rgba(255,255,255,.64);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+ box-shadow:12px 16px 38px rgba(64,99,158,.10),-10px -10px 28px rgba(255,255,255,.86);
+}
+.landing-brand .brand-mark{background:linear-gradient(145deg,#3979f5,#1749c8);border-radius:15px;box-shadow:0 8px 18px rgba(36,93,232,.24)}
+.landing-brand strong{color:#142344}
+.landing-brand span,.landing .eyebrow{color:#5574a8}
+.landing .eyebrow{letter-spacing:2px}
+.landing h1{color:#142344;letter-spacing:-1.5px}
+.landing h1 span{color:#245de8}
+.landing-subtitle{color:#64748b}
+.role-grid{gap:14px}
+.role-card{
+ border:1px solid rgba(255,255,255,.96);border-radius:17px;
+ background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(239,245,255,.88));
+ box-shadow:7px 8px 20px rgba(65,99,157,.09),-5px -5px 16px rgba(255,255,255,.95);
+ padding:20px;transition:transform .24s cubic-bezier(.2,.75,.25,1),box-shadow .24s,border-color .24s;
+}
+.role-card:hover{transform:translateY(-4px);border-color:#b9d0ff;box-shadow:10px 13px 24px rgba(65,99,157,.14),-5px -5px 16px #fff}
+.role-card strong{color:#142344}
+.role-card span{color:#64748b}
+.role-icon{background:linear-gradient(145deg,#e8f0ff,#dce8ff)!important;color:#245de8!important;border-radius:13px;box-shadow:inset 2px 2px 5px rgba(255,255,255,.95),3px 4px 9px rgba(70,110,180,.12)}
+.role-card b{background:#e7efff;color:#245de8;border-radius:50%;width:30px;height:30px;display:grid;place-items:center}
+.landing-note{color:#7183a1}
+.modal-overlay{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);background:rgba(28,49,83,.22)}
+.auth-modal{
+ border:1px solid rgba(255,255,255,.95);border-radius:23px;
+ background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(240,246,255,.97));
+ box-shadow:12px 18px 42px rgba(37,69,126,.18),-7px -7px 24px rgba(255,255,255,.8);
+}
+.auth-modal:before{background:linear-gradient(90deg,#5b91ff,#245de8);height:4px}
+.auth-modal .eyebrow{background:#eaf1ff;color:#3b65b8;border-radius:20px;letter-spacing:1.5px}
+.auth-modal h2{color:#142344}
+.auth-modal .modal-subtitle{color:#64748b}
+.auth-modal label{color:#425675}
+.auth-modal input{
+ border:1px solid #e2eaf7;border-radius:13px;background:#f5f8fe;color:#142344;
+ box-shadow:inset 3px 3px 7px rgba(45,75,125,.06),inset -3px -3px 7px rgba(255,255,255,.9);
+}
+.auth-modal input:focus{border-color:#8eafff;box-shadow:0 0 0 3px rgba(36,93,232,.12)}
+.auth-modal .primary-btn,.primary-btn{
+ background:linear-gradient(110deg,#3478f6,#174bd0);color:white;border:1px solid rgba(255,255,255,.55);
+ border-radius:13px;box-shadow:0 7px 17px rgba(36,93,232,.24);transition:transform .2s,box-shadow .2s,filter .2s;
+}
+.auth-modal .primary-btn:hover,.primary-btn:hover{filter:brightness(1.04);transform:translateY(-2px);box-shadow:0 10px 22px rgba(36,93,232,.28)}
+.auth-modal .ghost-btn,.ghost-btn{border-radius:12px}
+.topbar{background:rgba(255,255,255,.92)}
+.main{background:#edf3fc}
+.stat-card,.panel,.chart-card,.report-card,.attendance-card{
+ border-color:#e0e8f4;background:#fbfdff;box-shadow:0 4px 16px rgba(48,77,126,.055);border-radius:13px
+}
+.stat-icon.blue,.stat-icon.green{background:#e8f0ff;color:#245de8}
+.stat-icon.orange{background:#fff2e7;color:#b66a3c}
+.nav-item.active{background:#294b82;box-shadow:inset 3px 0 #8eb3ff}
+.sidebar{background:#172c50}
+.primary-btn:focus-visible,.role-card:focus-visible,.ghost-btn:focus-visible{outline:3px solid rgba(36,93,232,.35);outline-offset:3px}
+@media(prefers-reduced-motion:no-preference){
+ .landing-card{animation:ppRise .65s cubic-bezier(.2,.75,.25,1) both}
+ .role-card:nth-child(1){animation:ppSoftEnter .45s .08s both}
+ .role-card:nth-child(2){animation:ppSoftEnter .45s .16s both}
+}
+@media(max-width:760px){
+ .landing-card{border-radius:22px;padding:26px 20px}
+ .landing:before{width:230px;height:230px;left:-165px;top:-130px}
+ .landing:after{width:210px;height:210px;right:-140px;bottom:-130px}
+ .role-card{padding:16px}
+}
