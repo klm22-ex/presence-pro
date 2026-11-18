@@ -64,16 +64,28 @@ async function ppLoadEmployees(){
     ppSupabase.from('attendance').select('*').gte('attendance_date',sinceISO).lte('attendance_date',today).order('attendance_date',{ascending:false})
   ]);
   if(e1)throw e1;if(e2)throw e2;
-  employees.length=0;
-  const employeeMap=new Map((emps||[]).map(e=>[e.id,e]));
-  for(const e of (emps||[])){
-    const a=(att||[]).find(x=>x.employee_id===e.id&&x.attendance_date===today);
-    let photo='';
-    if(e.photo_path){const {data}=await ppSupabase.storage.from('employee-photos').createSignedUrl(e.photo_path,3600);photo=data?.signedUrl||'';}
-    const arrival=a?.arrival_at||null;
-    employees.push({id:e.id,name:e.full_name,email:e.email||'',code:e.code,department:e.department||'Autre',active:e.active!==false,status:ppAttendanceStatus(arrival),time:ppTime(arrival),initials:e.full_name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase(),photo,authUserId:e.auth_user_id||null,accountLinked:!!e.auth_user_id,fingerprint:false,nativeBiometric:false,biometricId:null,supabaseId:e.id});
+  const employeeRows=emps||[],attendanceRows=att||[];
+  const employeeMap=new Map(employeeRows.map(e=>[e.id,e]));
+  const todayAttendance=new Map();
+  for(const row of attendanceRows){
+    if(row.attendance_date===today&&!todayAttendance.has(row.employee_id))todayAttendance.set(row.employee_id,row);
   }
-  history.splice(0,history.length,...(att||[]).map(r=>{const emp=employeeMap.get(r.employee_id);return [ppDateLabel(r.attendance_date),emp?.full_name||'Employé supprimé',ppTime(r.arrival_at),ppTime(r.departure_at),r.arrival_at?ppAttendanceStatus(r.arrival_at):'absent'];}));
+  const photoPaths=employeeRows.filter(e=>e.photo_path).map(e=>e.photo_path);
+  const photoUrls=new Map();
+  if(photoPaths.length){
+    const {data: signedPhotos,error:photoError}=await ppSupabase.storage.from('employee-photos').createSignedUrls(photoPaths,3600);
+    if(photoError)console.warn('PrésencePro : certaines photos ne peuvent pas être chargées.',photoError);
+    for(const item of (signedPhotos||[])){
+      if(item.path&&item.signedUrl)photoUrls.set(item.path,item.signedUrl);
+    }
+  }
+  employees.length=0;
+  for(const e of employeeRows){
+    const a=todayAttendance.get(e.id);
+    const arrival=a?.arrival_at||null;
+    employees.push({id:e.id,name:e.full_name,email:e.email||'',code:e.code,department:e.department||'Autre',active:e.active!==false,status:ppAttendanceStatus(arrival),time:ppTime(arrival),initials:e.full_name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase(),photo:e.photo_path?photoUrls.get(e.photo_path)||'':'',authUserId:e.auth_user_id||null,accountLinked:!!e.auth_user_id,fingerprint:false,nativeBiometric:false,biometricId:null,supabaseId:e.id});
+  }
+  history.splice(0,history.length,...attendanceRows.map(r=>{const emp=employeeMap.get(r.employee_id);return [ppDateLabel(r.attendance_date),emp?.full_name||'Employé supprimé',ppTime(r.arrival_at),ppTime(r.departure_at),r.arrival_at?ppAttendanceStatus(r.arrival_at):'absent'];}));
   renderRecent();renderEmployees();renderHistory();renderBiometric();ppRefreshDashboard();
 }
 async function ppCompressEmployeePhoto(file){
