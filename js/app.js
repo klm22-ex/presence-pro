@@ -442,7 +442,25 @@ async function loadReportPageFromServer(){
     if(reportPage>pages){reportPage=pages;return loadReportPageFromServer();}
     const rows=(data||[]).map(r=>[ppDateLabel(r.attendance_date),r.employees?.full_name||'Employé',ppTime(r.arrival_at),ppTime(r.departure_at),r.arrival_at?ppAttendanceStatus(r.arrival_at):'absent']);
     renderReportRows(rows,start,total,pages);
+    loadReportSummaryFromServer(requestId);
   }catch(error){if(requestId!==reportRequestId)return;console.error('Chargement du rapport impossible:',error);body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:#b45309">Impossible de charger le rapport. Réessayez.</td></tr>';const count=document.getElementById('reportRecordCount');if(count)count.textContent='—';}
+}
+async function loadReportSummaryFromServer(requestId){
+  try{
+    const batchSize=500;let offset=0,records=0,present=0,late=0;
+    while(true){
+      const {data,error}=await buildReportQuery().range(offset,offset+batchSize-1);
+      if(error)throw error;if(requestId!==reportRequestId)return;
+      const batch=data||[];
+      for(const row of batch){records++;if(row.arrival_at){present++;if(ppAttendanceStatus(row.arrival_at)==='late')late++;}}
+      if(batch.length<batchSize)break;offset+=batchSize;
+    }
+    if(requestId!==reportRequestId)return;
+    const presenceRate=document.getElementById('reportPresenceRate'),lateRate=document.getElementById('reportLateRate'),recordCount=document.getElementById('reportRecordCount');
+    if(presenceRate)presenceRate.textContent=records?Math.round(present/records*100)+'%':'0%';
+    if(lateRate)lateRate.textContent=records?Math.round(late/records*100)+'%':'0%';
+    if(recordCount)recordCount.textContent=records;
+  }catch(error){if(requestId===reportRequestId){console.error('Calcul des indicateurs impossible:',error);const p=document.getElementById('reportPresenceRate'),l=document.getElementById('reportLateRate');if(p)p.textContent='—';if(l)l.textContent='—';}}
 }
 function renderReportRows(rows,start,total,pages){
   const present=rows.filter(r=>r[2]!=='—').length,late=rows.filter(r=>r[4]==='late').length,rate=rows.length?Math.round(present/rows.length*100):0,lateRate=rows.length?Math.round(late/rows.length*100):0;
