@@ -211,7 +211,7 @@
 
         <section class="page-section" id="history">
           <div class="section-heading"><div><p class="eyebrow">SUIVI</p><h1>Historique des présences</h1><p>Consultez les pointages enregistrés.</p></div><button class="ghost-btn" onclick="downloadCSV()">Exporter CSV</button></div>
-          <article class="panel"><div class="toolbar"><div class="search"><span>⌕</span><input id="historySearch" placeholder="Rechercher un employé..." /></div><input class="date-input" type="date" id="historyDate"></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Employé</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr></thead><tbody id="historyTable"></tbody></table></div></article>
+          <article class="panel"><div class="toolbar"><div class="search"><span>⌕</span><input id="historySearch" placeholder="Rechercher un employé..." /></div><input class="date-input" type="date" id="historyDate"></div><div class="table-wrap"><table><thead><tr><th>Date</th><th>Employé</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr></thead><tbody id="historyTable"></tbody></table></div><div class="history-pagination"><span id="historyPageInfo" aria-live="polite">Aucun résultat</span><div class="history-pagination-actions"><button class="ghost-btn" id="historyPrev" type="button" onclick="changeHistoryPage(-1)" disabled>Précédent</button><span id="historyPageNumber">Page 1 / 1</span><button class="ghost-btn" id="historyNext" type="button" onclick="changeHistoryPage(1)" disabled>Suivant</button></div></div></article>
         </section>
 
         <section class="page-section" id="reports">
@@ -335,6 +335,6 @@
   <script src="js/supabase-config.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="js/app.js?v=20261118-employee-load-optimization"></script>
+  <script src="js/app.js?v=20261118-history-pagination"></script>
 </body>
 </html>
