@@ -490,7 +490,35 @@ async function downloadCSV(){
   }catch(error){console.error('Export CSV impossible:',error);showToast('Export impossible : '+(error.message||'erreur de chargement'));}
   finally{if(button){button.disabled=false;button.textContent=button.dataset.originalText||'Exporter CSV';delete button.dataset.originalText;}}
 }
-function printReport(){const rows=reportRows();if(!rows.length){showToast('Aucune donnée à imprimer.');return;}const w=window.open('','_blank');if(!w){showToast('Autorisez les fenêtres pop-up pour imprimer le rapport.');return;}w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport PrésencePro</title><style>body{font:14px Arial;padding:24px;color:#182235}h1{margin-bottom:4px}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{border:1px solid #ccd3df;padding:9px;text-align:left}th{background:#edf2f7}</style></head><body><h1>PrésencePro RDC — Rapport des présences</h1><p>Généré le ${new Date().toLocaleString('fr-FR')}</p><table><thead><tr><th>Date</th><th>Employé</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr></thead><tbody>${rows.map(r=>`<tr>${[r[0],r[1],r[2],r[3],labels[r[4]]||r[4]].map(v=>`<td>${escapeHTML(v)}</td>`).join('')}</tr>`).join('')}</tbody></table><script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close();}
+async function printReport(){
+  const w=window.open('','_blank');
+  if(!w){showToast('Autorisez les fenêtres pop-up pour imprimer le rapport.');return;}
+  w.document.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport PrésencePro</title></head><body style="font:14px Arial;padding:24px;color:#182235"><h2>Préparation du rapport…</h2><p>Récupération de toutes les lignes correspondant aux filtres.</p></body></html>');
+  try{
+    let rows=[];
+    if(ppSupabase&&ppOrganizationId&&ppSession){
+      const batchSize=500;let offset=0;
+      while(true){
+        const {data,error}=await buildReportQuery().range(offset,offset+batchSize-1);
+        if(error)throw error;
+        const batch=data||[];
+        rows.push(...batch.map(r=>[ppDateLabel(r.attendance_date),r.employees?.full_name||'Employé',ppTime(r.arrival_at),ppTime(r.departure_at),r.arrival_at?ppAttendanceStatus(r.arrival_at):'absent']));
+        if(batch.length<batchSize)break;
+        offset+=batchSize;
+      }
+    }else rows=reportRows();
+    if(!rows.length){w.close();showToast('Aucune donnée à imprimer pour cette période.');return;}
+    const body=rows.map(r=>'<tr>'+[r[0],r[1],r[2],r[3],labels[r[4]]||r[4]].map(v=>'<td>'+escapeHTML(v)+'</td>').join('')+'</tr>').join('');
+    w.document.open();
+    w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport PrésencePro</title><style>body{font:14px Arial;padding:24px;color:#182235}h1{margin-bottom:4px}p{color:#536176}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{border:1px solid #ccd3df;padding:9px;text-align:left}th{background:#edf2f7}tr{break-inside:avoid}@media print{body{padding:0}}</style></head><body><h1>PrésencePro RDC — Rapport des présences</h1><p>Généré le ${escapeHTML(new Date().toLocaleString('fr-FR'))} · ${rows.length} ligne(s)</p><table><thead><tr><th>Date</th><th>Employé</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr></thead><tbody>${body}</tbody></table><script>window.onload=()=>window.print()<\\/script></body></html>`);
+    w.document.close();
+    showToast(rows.length+' lignes préparées pour impression.');
+  }catch(error){
+    console.error('Impression du rapport impossible:',error);
+    w.close();
+    showToast('Impression impossible : '+(error.message||'erreur de chargement'));
+  }
+}
 function updateDate(){
   const now=new Date();
   document.getElementById("currentDate").textContent=now.toLocaleDateString("fr-FR",{weekday:"short",day:"2-digit",month:"short",year:"numeric"});
