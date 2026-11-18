@@ -454,7 +454,7 @@ function renderReportRows(rows,start,total,pages){
 }
 function changeReportPage(direction){reportPage=Math.max(1,reportPage+direction);renderReports();}
 async function downloadCSV(){
-  const button=event?.currentTarget;if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent='Préparation…';}
+  const button=document.activeElement?.tagName==='BUTTON'?document.activeElement:null;if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent='Préparation…';}
   try{
     let rows=[];
     if(ppSupabase&&ppOrganizationId&&ppSession){
