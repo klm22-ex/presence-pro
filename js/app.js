@@ -76,15 +76,47 @@ async function ppLoadEmployees(){
   history.splice(0,history.length,...(att||[]).map(r=>{const emp=employeeMap.get(r.employee_id);return [ppDateLabel(r.attendance_date),emp?.full_name||'Employé supprimé',ppTime(r.arrival_at),ppTime(r.departure_at),r.arrival_at?ppAttendanceStatus(r.arrival_at):'absent'];}));
   renderRecent();renderEmployees();renderHistory();renderBiometric();ppRefreshDashboard();
 }
+async function ppCompressEmployeePhoto(file){
+  if(!file)return null;
+  if(!file.type||!file.type.startsWith('image/'))throw new Error('Choisissez un fichier image.');
+  if(file.size>15*1024*1024)throw new Error('La photo dépasse 15 Mo. Choisissez une image plus légère.');
+  const objectUrl=URL.createObjectURL(file);
+  try{
+    const image=await new Promise((resolve,reject)=>{
+      const img=new Image();
+      img.onload=()=>resolve(img);
+      img.onerror=()=>reject(new Error('Cette image ne peut pas être lue.'));
+      img.src=objectUrl;
+    });
+    const maxSide=1280,scale=Math.min(1,maxSide/Math.max(image.naturalWidth,image.naturalHeight));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
+    canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+    const context=canvas.getContext('2d');
+    if(!context)throw new Error('Compression photo indisponible sur cet appareil.');
+    context.fillStyle='#ffffff';
+    context.fillRect(0,0,canvas.width,canvas.height);
+    context.drawImage(image,0,0,canvas.width,canvas.height);
+    const encode=quality=>new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Impossible de compresser cette photo.')),'image/jpeg',quality));
+    let blob=await encode(0.82);
+    for(const quality of [0.72,0.62,0.52]){
+      if(blob.size<=450*1024)break;
+      blob=await encode(quality);
+    }
+    if(blob.size>900*1024)throw new Error('La photo reste trop volumineuse après optimisation. Choisissez une autre image.');
+    const base=(file.name||'photo-agent').replace(/\.[^.]+$/,'').replace(/[^a-z0-9_-]/gi,'_').slice(0,60)||'photo-agent';
+    return new File([blob],base+'.jpg',{type:'image/jpeg',lastModified:Date.now()});
+  }finally{URL.revokeObjectURL(objectUrl);}
+}
 async function ppCreateEmployee({name,email,code,department,photoFile}){
   const enrollmentCode='PP-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase();
   const {data:e,error}=await ppSupabase.from('employees').insert({organization_id:ppOrganizationId,full_name:name,email:email.trim().toLowerCase(),code,department,enrollment_code:enrollmentCode}).select().single();
   if(error)throw error;
   let photoPath=null;
   if(photoFile){
-    const ext=(photoFile.name.split('.').pop()||'jpg').toLowerCase();
-    photoPath=`${ppOrganizationId}/${e.id}.${ext}`;
-    const {error:upErr}=await ppSupabase.storage.from('employee-photos').upload(photoPath,photoFile,{upsert:true,contentType:photoFile.type});
+    const optimizedPhoto=await ppCompressEmployeePhoto(photoFile);
+    photoPath=`${ppOrganizationId}/${e.id}.jpg`;
+    const {error:upErr}=await ppSupabase.storage.from('employee-photos').upload(photoPath,optimizedPhoto,{upsert:true,contentType:'image/jpeg'});
     if(upErr)throw upErr;
     const {error:upDbErr}=await ppSupabase.from('employees').update({photo_path:photoPath}).eq('id',e.id);
     if(upDbErr)throw upDbErr;
@@ -294,9 +326,9 @@ async function showEmployeeDetails(employeeId){
       if(ppSupabase&&ppSession&&ppOrganizationId&&realId){
         const patch={full_name:name,email,code,department,active};
         if(photoFile){
-          const ext=(photoFile.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
-          const photoPath=`${ppOrganizationId}/${realId}.${ext}`;
-          const {error:uploadError}=await ppSupabase.storage.from('employee-photos').upload(photoPath,photoFile,{upsert:true,contentType:photoFile.type});
+          const optimizedPhoto=await ppCompressEmployeePhoto(photoFile);
+          const photoPath=`${ppOrganizationId}/${realId}.jpg`;
+          const {error:uploadError}=await ppSupabase.storage.from('employee-photos').upload(photoPath,optimizedPhoto,{upsert:true,contentType:'image/jpeg'});
           if(uploadError)throw uploadError;
           patch.photo_path=photoPath;
         }
@@ -528,7 +560,7 @@ function simulateFingerprint(){
   document.getElementById("fingerprintState").textContent="IDENTITÉ VÉRIFIÉE"; document.getElementById("deviceStatus").textContent=`Empreinte reconnue : ${verified.name}`;
   showToast(`Identité vérifiée : ${verified.name}. Pointage prêt à être enregistré.`); setTimeout(()=>document.getElementById("fingerprintState").textContent="CAPTEUR EN ATTENTE",2500);
 }
-document.getElementById("newPhoto").addEventListener("change",e=>{const f=e.target.files[0]; if(f){const r=new FileReader();r.onload=()=>document.getElementById("photoPreview").innerHTML=`<img src="${r.result}" alt="Aperçu">`;r.readAsDataURL(f);}});
+document.getElementById("newPhoto").addEventListener("change",e=>{const f=e.target.files[0],preview=document.getElementById("photoPreview");if(!preview)return;if(!f){preview.innerHTML="<span>Aperçu photo</span>";return;}if(!f.type.startsWith('image/')){e.target.value='';preview.innerHTML="<span>Fichier image invalide</span>";showToast('Choisissez une photo au format image.');return;}const url=URL.createObjectURL(f);preview.innerHTML=`<img src="${url}" alt="Aperçu de la photo">`;});
 renderBiometric();
 
 /* === Biométrie native de l'appareil : WebAuthn / Passkeys === */
