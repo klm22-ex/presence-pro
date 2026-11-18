@@ -414,13 +414,64 @@ function renderHistoryRows(rows,start,total,pages){
   const prev=document.getElementById('historyPrev'),next=document.getElementById('historyNext');if(prev)prev.disabled=historyPage<=1;if(next)next.disabled=historyPage>=pages;
   const pageLabel=document.getElementById('historyPageNumber');if(pageLabel)pageLabel.textContent='Page '+historyPage+' / '+pages;
 }
-function reportRows(){const from=document.getElementById('reportFrom')?.value||'';const to=document.getElementById('reportTo')?.value||'';const dept=document.getElementById('reportDepartment')?.value||'all';return history.filter(r=>{const iso=r[0].split('/').reverse().join('-');const emp=employees.find(e=>e.name===r[1]);return (!from||iso>=from)&&(!to||iso<=to)&&(dept==='all'||emp?.department===dept);});}
-function renderReports(){
-  const rows=reportRows();const total=employees.filter(e=>e.active!==false).length;const present=rows.filter(r=>r[2]!=='—').length;const late=rows.filter(r=>r[4]==='late').length;const days=Math.max(1,new Set(rows.map(r=>r[0])).size);const rate=rows.length?Math.round((present/rows.length)*100):0;const lateRate=rows.length?Math.round(late/rows.length*100):0;
-  const a=document.getElementById('reportPresenceRate');if(a)a.textContent=rate+'%';const b=document.getElementById('reportLateRate');if(b)b.textContent=lateRate+'%';const c=document.getElementById('reportRecordCount');if(c)c.textContent=rows.length;const d=document.getElementById('reportAbsentCount');if(d)d.textContent=Math.max(0,total*days-new Set(rows.filter(r=>r[2]!=='—').map(r=>r[0]+'|'+r[1])).size);
-  const body=document.getElementById('reportTable');if(body)body.innerHTML=rows.map(r=>`<tr><td>${escapeHTML(r[0])}</td><td>${escapeHTML(r[1])}</td><td>${escapeHTML(r[2])}</td><td>${escapeHTML(r[3])}</td><td>${escapeHTML(labels[r[4]]||r[4])}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:24px">Aucune donnée pour cette période.</td></tr>';
+let reportPage=1;
+const REPORT_PAGE_SIZE=25;
+let reportRequestId=0;
+function reportRows(){
+  const from=document.getElementById('reportFrom')?.value||'',to=document.getElementById('reportTo')?.value||'',dept=document.getElementById('reportDepartment')?.value||'all';
+  return history.filter(r=>{const iso=r[0].split('/').reverse().join('-');const emp=employees.find(e=>e.name===r[1]);return (!from||iso>=from)&&(!to||iso<=to)&&(dept==='all'||emp?.department===dept);});
 }
-function downloadCSV(){const rows=reportRows();if(!rows.length){showToast('Aucune donnée à exporter pour cette période.');return;}const data=[['Date','Employé','Arrivée','Départ','Statut'],...rows.map(r=>[...r.slice(0,4),labels[r[4]]||r[4]])];const csv='\ufeff'+data.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`presencepro-rapport-${ppLocalDateISO()}.csv`;a.click();URL.revokeObjectURL(url);}
+function renderReports(){
+  if(ppSupabase&&ppOrganizationId&&ppSession){loadReportPageFromServer();return;}
+  const rows=reportRows(),total=rows.length,pages=Math.max(1,Math.ceil(total/REPORT_PAGE_SIZE));reportPage=Math.min(reportPage,pages);
+  const start=(reportPage-1)*REPORT_PAGE_SIZE;renderReportRows(rows.slice(start,start+REPORT_PAGE_SIZE),start,total,pages);
+}
+function buildReportQuery(){
+  const from=document.getElementById('reportFrom')?.value||'',to=document.getElementById('reportTo')?.value||'',dept=document.getElementById('reportDepartment')?.value||'all';
+  let query=ppSupabase.from('attendance').select('attendance_date,arrival_at,departure_at,employees!attendance_employee_id_fkey!inner(full_name,department)',{count:'exact'}).eq('organization_id',ppOrganizationId).order('attendance_date',{ascending:false});
+  if(from)query=query.gte('attendance_date',from);if(to)query=query.lte('attendance_date',to);if(dept!=='all')query=query.eq('employees.department',dept);
+  return query;
+}
+async function loadReportPageFromServer(){
+  const requestId=++reportRequestId,body=document.getElementById('reportTable');if(!body)return;
+  const start=(reportPage-1)*REPORT_PAGE_SIZE;body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:#738196">Chargement du rapport…</td></tr>';
+  try{
+    const {data,error,count}=await buildReportQuery().range(start,start+REPORT_PAGE_SIZE-1);
+    if(error)throw error;if(requestId!==reportRequestId)return;
+    const total=count||0,pages=Math.max(1,Math.ceil(total/REPORT_PAGE_SIZE));
+    if(reportPage>pages){reportPage=pages;return loadReportPageFromServer();}
+    const rows=(data||[]).map(r=>[ppDateLabel(r.attendance_date),r.employees?.full_name||'Employé',ppTime(r.arrival_at),ppTime(r.departure_at),r.arrival_at?ppAttendanceStatus(r.arrival_at):'absent']);
+    renderReportRows(rows,start,total,pages);
+  }catch(error){if(requestId!==reportRequestId)return;console.error('Chargement du rapport impossible:',error);body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:#b45309">Impossible de charger le rapport. Réessayez.</td></tr>';const count=document.getElementById('reportRecordCount');if(count)count.textContent='—';}
+}
+function renderReportRows(rows,start,total,pages){
+  const present=rows.filter(r=>r[2]!=='—').length,late=rows.filter(r=>r[4]==='late').length,rate=rows.length?Math.round(present/rows.length*100):0,lateRate=rows.length?Math.round(late/rows.length*100):0;
+  const a=document.getElementById('reportPresenceRate');if(a)a.textContent=rate+'%';const b=document.getElementById('reportLateRate');if(b)b.textContent=lateRate+'%';const c=document.getElementById('reportRecordCount');if(c)c.textContent=total;
+  const body=document.getElementById('reportTable');if(body)body.innerHTML=rows.map(r=>`<tr><td>${escapeHTML(r[0])}</td><td>${escapeHTML(r[1])}</td><td>${escapeHTML(r[2])}</td><td>${escapeHTML(r[3])}</td><td>${escapeHTML(labels[r[4]]||r[4])}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:24px">Aucune donnée pour cette période.</td></tr>';
+  const info=document.getElementById('reportPageInfo');if(info)info.textContent=total?'Affichage '+(start+1)+'–'+Math.min(start+rows.length,total)+' sur '+total:'Aucun résultat';
+  const prev=document.getElementById('reportPrev'),next=document.getElementById('reportNext');if(prev)prev.disabled=reportPage<=1;if(next)next.disabled=reportPage>=pages;
+  const page=document.getElementById('reportPageNumber');if(page)page.textContent='Page '+reportPage+' / '+pages;
+}
+function changeReportPage(direction){reportPage=Math.max(1,reportPage+direction);renderReports();}
+async function downloadCSV(){
+  const button=event?.currentTarget;if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent='Préparation…';}
+  try{
+    let rows=[];
+    if(ppSupabase&&ppOrganizationId&&ppSession){
+      const batchSize=500;let offset=0;
+      while(true){
+        const {data,error}=await buildReportQuery().range(offset,offset+batchSize-1);if(error)throw error;
+        const batch=data||[];rows.push(...batch.map(r=>[ppDateLabel(r.attendance_date),r.employees?.full_name||'Employé',ppTime(r.arrival_at),ppTime(r.departure_at),r.arrival_at?ppAttendanceStatus(r.arrival_at):'absent']));
+        if(batch.length<batchSize)break;offset+=batchSize;
+      }
+    }else rows=reportRows();
+    if(!rows.length){showToast('Aucune donnée à exporter pour cette période.');return;}
+    const data=[['Date','Employé','Arrivée','Départ','Statut'],...rows.map(r=>[...r.slice(0,4),labels[r[4]]||r[4]])];
+    const csv='\\ufeff'+data.map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\\r\\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`presencepro-rapport-${ppLocalDateISO()}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);showToast(rows.length+' lignes exportées.');
+  }catch(error){console.error('Export CSV impossible:',error);showToast('Export impossible : '+(error.message||'erreur de chargement'));}
+  finally{if(button){button.disabled=false;button.textContent=button.dataset.originalText||'Exporter CSV';delete button.dataset.originalText;}}
+}
 function printReport(){const rows=reportRows();if(!rows.length){showToast('Aucune donnée à imprimer.');return;}const w=window.open('','_blank');if(!w){showToast('Autorisez les fenêtres pop-up pour imprimer le rapport.');return;}w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport PrésencePro</title><style>body{font:14px Arial;padding:24px;color:#182235}h1{margin-bottom:4px}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{border:1px solid #ccd3df;padding:9px;text-align:left}th{background:#edf2f7}</style></head><body><h1>PrésencePro RDC — Rapport des présences</h1><p>Généré le ${new Date().toLocaleString('fr-FR')}</p><table><thead><tr><th>Date</th><th>Employé</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr></thead><tbody>${rows.map(r=>`<tr>${[r[0],r[1],r[2],r[3],labels[r[4]]||r[4]].map(v=>`<td>${escapeHTML(v)}</td>`).join('')}</tr>`).join('')}</tbody></table><script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close();}
 function updateDate(){
   const now=new Date();
@@ -505,7 +556,7 @@ document.getElementById("employeeFilter").addEventListener("change",renderEmploy
 document.getElementById("employeeAccountFilter")?.addEventListener("change",renderEmployees);
 document.getElementById("historySearch").addEventListener("input",()=>{historyPage=1;renderHistory();});
 document.getElementById('historyDate')?.addEventListener('change',()=>{historyPage=1;renderHistory();});
-document.getElementById('reportFrom')?.addEventListener('change',renderReports);document.getElementById('reportTo')?.addEventListener('change',renderReports);document.getElementById('reportDepartment')?.addEventListener('change',renderReports);
+['reportFrom','reportTo','reportDepartment'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>{reportPage=1;renderReports();}));
 
 // Demandes de congé et d’absence (nécessite la migration SQL V15).
 async function submitLeaveRequest(event){
