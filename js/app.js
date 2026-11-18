@@ -379,6 +379,46 @@ async function showEmployeeDetails(employeeId){
 
 let historyPage=1;
 const HISTORY_PAGE_SIZE=25;
+let historyRequestId=0;
+let historyServerMode=false;
+function changeHistoryPage(direction){
+  historyPage=Math.max(1,historyPage+direction);
+  renderHistory();
+}
+function renderHistory(){
+  if(ppSupabase&&ppOrganizationId&&ppSession){
+    loadHistoryPageFromServer();
+    return;
+  }
+  historyServerMode=false;
+  const q=(document.getElementById('historySearch')?.value||'').toLowerCase();
+  const dateFilter=document.getElementById('historyDate')?.value||'';
+  const list=history.filter(r=>r[1].toLowerCase().includes(q)&&(!dateFilter||r[0]===ppDateLabel(dateFilter)));
+  const pages=Math.max(1,Math.ceil(list.length/HISTORY_PAGE_SIZE));
+  historyPage=Math.min(historyPage,pages);
+  const start=(historyPage-1)*HISTORY_PAGE_SIZE;
+  const pageRows=list.slice(start,start+HISTORY_PAGE_SIZE);
+  renderHistoryRows(pageRows,start,list.length,pages,false);
+}
+async function loadHistoryPageFromServer(){
+  const requestId=++historyRequestId;
+  const body=document.getElementById('historyTable');if(!body)return;
+  const q=(document.getElementById('historySearch')?.value||'').trim();
+  const dateFilter=document.getElementById('historyDate')?.value||'';
+  const start=(historyPage-1)*HISTORY_PAGE_SIZE;
+  const end=start+HISTORY_PAGE_SIZE-1;
+  const prev=document.getElementById('historyPrev'),next=document.getElementById('historyNext');
+  if(prev)prev.disabled=true;if(next)next.disabled=true;
+  body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:28px;color:#738196">Chargement des pointages…</td></tr>';
+  try{
+    let query=ppSupabase.from('attendance')
+      .select('attendance_date,arrival_at,departure_at,employees!attendance_employee_id_fkey!inner(full_name)',{count:'exact'})
+      .eq('organization_id',ppOrganizationId)
+      .order('attendance_date',{ascending:false})
+      .range(start,end);
+    if(dateFilter)query=query.eq('attendance_date',dateFilter);
+    if(q)query=query.ilike('employees.full_name',`%${q.replace(/[%_]/g,'\\let historyPage=1;
+const HISTORY_PAGE_SIZE=25;
 function changeHistoryPage(direction){
   const q=(document.getElementById('historySearch')?.value||'').toLowerCase();
   const dateFilter=document.getElementById('historyDate')?.value||'';
@@ -399,6 +439,41 @@ function renderHistory(){
   body.innerHTML=pageRows.map(r=>`<tr><td>${escapeHTML(r[0])}</td><td><strong>${escapeHTML(r[1])}</strong></td><td>${escapeHTML(r[2])}</td><td>${escapeHTML(r[3])}</td><td>${statusHTML(r[4])}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:28px;color:#738196">Aucun pointage trouvé pour ces filtres.</td></tr>';
   const info=document.getElementById('historyPageInfo');
   if(info)info.textContent=list.length?`Affichage ${start+1}–${Math.min(start+HISTORY_PAGE_SIZE,list.length)} sur ${list.length}`:'Aucun résultat';
+  const prev=document.getElementById('historyPrev'),next=document.getElementById('historyNext');
+  if(prev)prev.disabled=historyPage<=1;
+  if(next)next.disabled=historyPage>=pages;
+  const pageLabel=document.getElementById('historyPageNumber');
+  if(pageLabel)pageLabel.textContent=`Page ${historyPage} / ${pages}`;
+}')}%`);
+    const {data,error,count}=await query;
+    if(error)throw error;
+    if(requestId!==historyRequestId)return;
+    const total=count||0;
+    const pages=Math.max(1,Math.ceil(total/HISTORY_PAGE_SIZE));
+    if(historyPage>pages){historyPage=pages;return loadHistoryPageFromServer();}
+    const rows=(data||[]).map(r=>[
+      ppDateLabel(r.attendance_date),
+      r.employees?.full_name||'Employé',
+      ppTime(r.arrival_at),
+      ppTime(r.departure_at),
+      r.arrival_at?ppAttendanceStatus(r.arrival_at):'absent'
+    ]);
+    historyServerMode=true;
+    renderHistoryRows(rows,start,total,pages,true);
+  }catch(error){
+    if(requestId!==historyRequestId)return;
+    console.error('Chargement de l’historique impossible:',error);
+    body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:28px;color:#b45309">Impossible de charger cet historique. Réessayez.</td></tr>';
+    const info=document.getElementById('historyPageInfo');if(info)info.textContent='Erreur de chargement';
+    if(prev)prev.disabled=historyPage<=1;
+    if(next)next.disabled=true;
+  }
+}
+function renderHistoryRows(rows,start,total,pages,serverMode){
+  const body=document.getElementById('historyTable');if(!body)return;
+  body.innerHTML=rows.map(r=>`<tr><td>${escapeHTML(r[0])}</td><td><strong>${escapeHTML(r[1])}</strong></td><td>${escapeHTML(r[2])}</td><td>${escapeHTML(r[3])}</td><td>${statusHTML(r[4])}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:28px;color:#738196">Aucun pointage trouvé pour ces filtres.</td></tr>';
+  const info=document.getElementById('historyPageInfo');
+  if(info)info.textContent=total?`Affichage ${start+1}–${Math.min(start+rows.length,total)} sur ${total}`:'Aucun résultat';
   const prev=document.getElementById('historyPrev'),next=document.getElementById('historyNext');
   if(prev)prev.disabled=historyPage<=1;
   if(next)next.disabled=historyPage>=pages;
