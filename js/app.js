@@ -377,12 +377,33 @@ async function showEmployeeDetails(employeeId){
   }catch(err){console.error(err);historyBox.innerHTML='<h3>Historique récent</h3><p class="detail-empty">Impossible de charger l’historique pour le moment.</p>';}
 }
 
+let historyPage=1;
+const HISTORY_PAGE_SIZE=25;
+function changeHistoryPage(direction){
+  const q=(document.getElementById('historySearch')?.value||'').toLowerCase();
+  const dateFilter=document.getElementById('historyDate')?.value||'';
+  const count=history.filter(r=>r[1].toLowerCase().includes(q)&&(!dateFilter||r[0]===ppDateLabel(dateFilter))).length;
+  const pages=Math.max(1,Math.ceil(count/HISTORY_PAGE_SIZE));
+  historyPage=Math.min(pages,Math.max(1,historyPage+direction));
+  renderHistory();
+}
 function renderHistory(){
   const q=(document.getElementById('historySearch')?.value||'').toLowerCase();
   const dateFilter=document.getElementById('historyDate')?.value||'';
   const list=history.filter(r=>r[1].toLowerCase().includes(q)&&(!dateFilter||r[0]===ppDateLabel(dateFilter)));
+  const pages=Math.max(1,Math.ceil(list.length/HISTORY_PAGE_SIZE));
+  historyPage=Math.min(historyPage,pages);
+  const start=(historyPage-1)*HISTORY_PAGE_SIZE;
+  const pageRows=list.slice(start,start+HISTORY_PAGE_SIZE);
   const body=document.getElementById('historyTable');if(!body)return;
-  body.innerHTML=list.map(r=>`<tr><td>${escapeHTML(r[0])}</td><td><strong>${escapeHTML(r[1])}</strong></td><td>${escapeHTML(r[2])}</td><td>${escapeHTML(r[3])}</td><td>${statusHTML(r[4])}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:28px;color:#738196">Aucun pointage trouvé pour ces filtres.</td></tr>';
+  body.innerHTML=pageRows.map(r=>`<tr><td>${escapeHTML(r[0])}</td><td><strong>${escapeHTML(r[1])}</strong></td><td>${escapeHTML(r[2])}</td><td>${escapeHTML(r[3])}</td><td>${statusHTML(r[4])}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:28px;color:#738196">Aucun pointage trouvé pour ces filtres.</td></tr>';
+  const info=document.getElementById('historyPageInfo');
+  if(info)info.textContent=list.length?`Affichage ${start+1}–${Math.min(start+HISTORY_PAGE_SIZE,list.length)} sur ${list.length}`:'Aucun résultat';
+  const prev=document.getElementById('historyPrev'),next=document.getElementById('historyNext');
+  if(prev)prev.disabled=historyPage<=1;
+  if(next)next.disabled=historyPage>=pages;
+  const pageLabel=document.getElementById('historyPageNumber');
+  if(pageLabel)pageLabel.textContent=`Page ${historyPage} / ${pages}`;
 }
 function reportRows(){const from=document.getElementById('reportFrom')?.value||'';const to=document.getElementById('reportTo')?.value||'';const dept=document.getElementById('reportDepartment')?.value||'all';return history.filter(r=>{const iso=r[0].split('/').reverse().join('-');const emp=employees.find(e=>e.name===r[1]);return (!from||iso>=from)&&(!to||iso<=to)&&(dept==='all'||emp?.department===dept);});}
 function renderReports(){
@@ -473,8 +494,8 @@ document.getElementById("employeeForm").addEventListener("submit",async e=>{
 document.getElementById("employeeSearch").addEventListener("input",renderEmployees);
 document.getElementById("employeeFilter").addEventListener("change",renderEmployees);
 document.getElementById("employeeAccountFilter")?.addEventListener("change",renderEmployees);
-document.getElementById("historySearch").addEventListener("input",renderHistory);
-document.getElementById('historyDate')?.addEventListener('change',renderHistory);
+document.getElementById("historySearch").addEventListener("input",()=>{historyPage=1;renderHistory();});
+document.getElementById('historyDate')?.addEventListener('change',()=>{historyPage=1;renderHistory();});
 document.getElementById('reportFrom')?.addEventListener('change',renderReports);document.getElementById('reportTo')?.addEventListener('change',renderReports);document.getElementById('reportDepartment')?.addEventListener('change',renderReports);
 
 // Demandes de congé et d’absence (nécessite la migration SQL V15).
