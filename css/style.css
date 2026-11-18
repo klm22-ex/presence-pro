@@ -544,3 +544,9 @@ body{background:#edf3fc;color:#142344}
  .landing:after{width:210px;height:210px;right:-140px;bottom:-130px}
  .role-card{padding:16px}
 }
+
+/* Historique : pagination de l'affichage */
+.history-pagination{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 2px 2px;color:var(--muted,#738196);font-size:13px}
+.history-pagination-actions{display:flex;align-items:center;gap:10px}
+.history-pagination button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:600px){.history-pagination{align-items:flex-start;flex-direction:column}.history-pagination-actions{width:100%;justify-content:space-between;gap:6px}.history-pagination-actions .ghost-btn{padding:9px 11px}}
