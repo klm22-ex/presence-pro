@@ -425,6 +425,9 @@ function renderReports(){
   if(ppSupabase&&ppOrganizationId&&ppSession){loadReportPageFromServer();return;}
   const rows=reportRows(),total=rows.length,pages=Math.max(1,Math.ceil(total/REPORT_PAGE_SIZE));reportPage=Math.min(reportPage,pages);
   const start=(reportPage-1)*REPORT_PAGE_SIZE;renderReportRows(rows.slice(start,start+REPORT_PAGE_SIZE),start,total,pages);
+  ['reportPresenceRate','reportAbsenceCount','reportLeaveDays','reportLateRate'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='—';});
+  const caption=document.getElementById('reportPresenceCaption');if(caption)caption.textContent='Connectez-vous à Supabase pour calculer l’assiduité.';
+
 }
 function buildReportQuery(){
   const from=document.getElementById('reportFrom')?.value||'',to=document.getElementById('reportTo')?.value||'',dept=document.getElementById('reportDepartment')?.value||'all';
@@ -482,7 +485,7 @@ async function loadReportSummaryFromServer(requestId){
     }
     let leaveRows=[],leaveOffset=0;
     while(true){
-      const {data,error}=await ppSupabase.from('leave_requests').select('employee_id,start_date,end_date').eq('organization_id',ppOrganizationId).eq('status','approved').lte('start_date',endDate).gte('end_date',startDate).range(leaveOffset,leaveOffset+499);
+      const {data,error}=await ppSupabase.from('leave_requests').select('employee_id,start_date,end_date').eq('organization_id',ppOrganizationId).eq('status','approved').lte('start_date',endDate).gte('end_date',startDate).order('start_date',{ascending:true}).range(leaveOffset,leaveOffset+499);
       if(error)throw error;
       const batch=data||[];leaveRows.push(...batch);if(batch.length<500)break;leaveOffset+=500;
       if(requestId!==reportRequestId)return;
@@ -492,13 +495,13 @@ async function loadReportSummaryFromServer(requestId){
       if(!leaveByEmployee.has(leave.employee_id))leaveByEmployee.set(leave.employee_id,[]);
       leaveByEmployee.get(leave.employee_id).push(leave);
     }
-    const employeeIds=employeesList.map(e=>e.id),attendanceByDay=new Map();let recordCount=0,attOffset=0;
+    const employeeIds=employeesList.map(e=>e.id),employeeIdSet=new Set(employeeIds),attendanceByDay=new Map();let recordCount=0,attOffset=0;
     while(true){
-      const {data,error}=await ppSupabase.from('attendance').select('employee_id,attendance_date,arrival_at').eq('organization_id',ppOrganizationId).gte('attendance_date',startDate).lte('attendance_date',endDate).range(attOffset,attOffset+499);
+      const {data,error}=await ppSupabase.from('attendance').select('employee_id,attendance_date,arrival_at').eq('organization_id',ppOrganizationId).gte('attendance_date',startDate).lte('attendance_date',endDate).order('attendance_date',{ascending:true}).range(attOffset,attOffset+499);
       if(error)throw error;
       const batch=data||[];
       for(const row of batch){
-        if(!employeeIds.includes(row.employee_id))continue;
+        if(!employeeIdSet.has(row.employee_id))continue;
         recordCount++;
         if(row.arrival_at)attendanceByDay.set(row.employee_id+'|'+row.attendance_date,row);
       }
@@ -709,7 +712,7 @@ async function loadLeaveRequests(){
     body.innerHTML=(data||[]).map(r=>`<tr><td>${escapeHTML(names[r.employee_id]||'Employé')}</td><td>${escapeHTML(r.request_type)}</td><td>${escapeHTML(r.start_date)} → ${escapeHTML(r.end_date)}</td><td>${escapeHTML(r.reason)}</td><td><span class="leave-status ${escapeHTML(r.status)}">${r.status==='pending'?'En attente':r.status==='approved'?'Approuvée':'Refusée'}</span></td><td>${r.status==='pending'?`<button class="ghost-btn" onclick="decideLeaveRequest('${r.id}','approved')">Approuver</button> <button class="ghost-btn" onclick="decideLeaveRequest('${r.id}','rejected')">Refuser</button>`:'—'}</td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px">Aucune demande.</td></tr>';
   }catch(err){body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px">Impossible de charger les demandes. Vérifiez que la migration SQL V15 a été exécutée.</td></tr>';}
 }
-async function decideLeaveRequest(id,status){if(!ppSupabase||!ppSession)return;try{const {error}=await ppSupabase.from('leave_requests').update({status,reviewed_by:ppSession.user.id,reviewed_at:new Date().toISOString()}).eq('id',id).eq('status','pending');if(error)throw error;showToast(status==='approved'?'Demande approuvée.':'Demande refusée.');await loadLeaveRequests();}catch(err){showToast('Décision impossible : vérifiez les permissions de votre compte.');}}
+async function decideLeaveRequest(id,status){if(!ppSupabase||!ppSession)return;try{const {error}=await ppSupabase.from('leave_requests').update({status,reviewed_by:ppSession.user.id,reviewed_at:new Date().toISOString()}).eq('id',id).eq('status','pending');if(error)throw error;showToast(status==='approved'?'Demande approuvée.':'Demande refusée.');await loadLeaveRequests();renderReports();}catch(err){showToast('Décision impossible : vérifiez les permissions de votre compte.');}}
 document.getElementById('leaveRequestForm')?.addEventListener('submit',submitLeaveRequest);
 
 async function ppLoadOrganizationSettings(){
