@@ -245,6 +245,10 @@
 
         <section class="page-section" id="settings">
           <div class="section-heading"><div><p class="eyebrow">CONFIGURATION</p><h1>Paramètres</h1><p>Personnalisez votre espace PrésencePro.</p></div></div>
+          <article class="panel" style="margin-bottom:18px"><div class="panel-head"><div><h2>Calendrier de l’entreprise</h2><p>Ajoutez les jours fériés et les exceptions propres à votre organisation. Aucun jour férié national n’est prérempli automatiquement.</p></div><button class="ghost-btn" type="button" onclick="loadCompanyCalendar()">Actualiser</button></div>
+            <form id="companyCalendarForm" class="toolbar" style="align-items:end;flex-wrap:wrap"><label>Date<input class="date-input" id="calendarDate" type="date" required></label><label>Libellé<input id="calendarLabel" maxlength="120" required placeholder="Ex. Fête nationale"></label><label>Type<select id="calendarType"><option value="holiday">Jour férié</option><option value="working_exception">Jour exceptionnellement travaillé</option><option value="non_working_exception">Jour exceptionnellement non travaillé</option></select></label><button class="primary-btn" type="submit">Ajouter au calendrier</button></form>
+            <div class="table-wrap"><table><thead><tr><th>Date</th><th>Libellé</th><th>Type</th><th>Action</th></tr></thead><tbody id="companyCalendarTable"><tr><td colspan="4">Chargement du calendrier…</td></tr></tbody></table></div>
+          </article>
           <article class="panel settings-list">
             <div><div><strong>Organisation</strong><span id="settingsOrganizationLabel">PrésencePro</span></div><button class="ghost-btn" type="button" data-settings-open="organization">Modifier</button></div>
             <div><div><strong>Horaires de travail</strong><span id="settingsHoursLabel">08:00 — 16:00</span></div><button class="ghost-btn" type="button" data-settings-open="hours">Configurer</button></div>
@@ -362,6 +366,6 @@
   <script src="js/supabase-config.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="js/app.js?v=20261119-private-absence-files"></script>
+  <script src="js/app.js?v=20261119-company-calendar"></script>
 </body>
 </html>
