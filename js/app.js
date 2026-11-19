@@ -781,7 +781,8 @@ async function decideAbsenceJustification(id,status){
   }catch(err){showToast('Décision impossible : vérifiez vos permissions.');console.error(err);}
 }
 document.getElementById('absenceJustificationForm')?.addEventListener('submit',submitAbsenceJustification);
-\nasync function loadLeaveRequests(){
+
+async function loadLeaveRequests(){
   const body=document.getElementById('leaveRequestsTable');if(!body)return;
   if(!ppSupabase||!ppSession||!ppOrganizationId){body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px">Connectez-vous à un compte administrateur relié à une organisation.</td></tr>';return;}
   try{const {data,error}=await ppSupabase.from('leave_requests').select('id,employee_id,request_type,start_date,end_date,reason,status,created_at').order('created_at',{ascending:false}).limit(100);if(error)throw error;const pendingCount=(data||[]).filter(r=>r.status==='pending').length;const nc=document.getElementById('notificationsCount');if(nc){nc.textContent=pendingCount;nc.hidden=pendingCount===0;}
