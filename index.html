@@ -273,8 +273,20 @@
       <form id="settingsHoursForm" data-settings-panel="hours" hidden>
         <label>Heure de début<input id="settingsStartTime" type="time" required value="08:00"></label>
         <label>Heure de fin<input id="settingsEndTime" type="time" required value="16:00"></label>
-        <p class="settings-help">Ces horaires sont actuellement enregistrés sur cet appareil. La synchronisation entre plusieurs appareils sera ajoutée avec les paramètres partagés côté serveur.</p>
-        <button class="primary-btn full" type="submit">Enregistrer les horaires</button>
+        <fieldset class="settings-days-fieldset">
+          <legend>Jours habituels de travail</legend>
+          <div class="settings-days-grid">
+            <label><input type="checkbox" name="workingDay" value="1"> Lundi</label>
+            <label><input type="checkbox" name="workingDay" value="2"> Mardi</label>
+            <label><input type="checkbox" name="workingDay" value="3"> Mercredi</label>
+            <label><input type="checkbox" name="workingDay" value="4"> Jeudi</label>
+            <label><input type="checkbox" name="workingDay" value="5"> Vendredi</label>
+            <label><input type="checkbox" name="workingDay" value="6"> Samedi</label>
+            <label><input type="checkbox" name="workingDay" value="7"> Dimanche</label>
+          </div>
+        </fieldset>
+        <p class="settings-help">Sélectionnez les jours réellement travaillés par votre entreprise. Sans calendrier configuré, PrésencePro ne devra pas déclarer automatiquement d'absence.</p>
+        <button class="primary-btn full" type="submit">Enregistrer les horaires et jours</button>
       </form>
     </div>
   </div>
