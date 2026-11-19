@@ -165,7 +165,7 @@ async function ppInit(){
   await ppBootCloud();
 }
 async function ppBootCloud(){
-  try{await ppLoadOrganization();await ppLoadEmployees();await ppLoadOrganizationSettings();await loadLeaveRequests();}
+  try{await ppLoadOrganization();await ppLoadEmployees();await ppLoadOrganizationSettings();await loadLeaveRequests();await loadAbsenceJustifications();}
   catch(err){console.error(err);showToast('Connexion Supabase : '+(err.message||'erreur'));}
 }
 const employees = [
@@ -228,7 +228,7 @@ async function enterAgent(){
   showApp('agent');
   navigateTo('agentHome');
   await loadEmployeeIdentity();
-  loadAgentHistory();loadMyLeaveRequests();
+  loadAgentHistory();loadMyLeaveRequests();loadMyAbsenceJustifications();
 }
 async function agentSignOut(){
   if(!ppSupabase||!employeePortalUser){backToHome();return;}
@@ -799,7 +799,7 @@ async function ppLoadOrganizationSettings(){
 }
 function openSubscriptionInfo(){document.getElementById('subscriptionModal')?.classList.add('open');}
 function closeSubscriptionInfo(){document.getElementById('subscriptionModal')?.classList.remove('open');}
-function openNotifications(){if(document.getElementById('appShell')?.classList.contains('mode-agent')){navigateTo('agentHome');loadMyLeaveRequests();return;}navigateTo('leaveRequests');loadLeaveRequests();}
+function openNotifications(){if(document.getElementById('appShell')?.classList.contains('mode-agent')){navigateTo('agentHome');loadMyLeaveRequests();loadMyAbsenceJustifications();return;}navigateTo('leaveRequests');loadLeaveRequests();}
 
 // Paramètres de l’organisation et horaires
 const PP_SETTINGS_KEY='presencepro_settings_v1';
