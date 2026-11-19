@@ -731,7 +731,57 @@ async function loadMyLeaveRequests(){
     box.innerHTML=(data||[]).map(r=>`<div class="leave-item"><div><strong>${escapeHTML(r.request_type)}</strong><small>${escapeHTML(r.start_date)} → ${escapeHTML(r.end_date)}</small><small>${escapeHTML(r.reason)}</small></div><span class="leave-status ${escapeHTML(r.status)}">${r.status==='pending'?'En attente':r.status==='approved'?'Approuvée':'Refusée'}</span></div>`).join('')||'<p class="settings-help">Aucune demande pour le moment.</p>';
   }catch(err){box.innerHTML='<p class="settings-help">La fonction congés nécessite la migration SQL V15.</p>';}
 }
-async function loadLeaveRequests(){
+
+// Justifications d'absence (après la journée concernée).
+async function submitAbsenceJustification(event){
+  event.preventDefault();
+  if(!ppSupabase||!ppSession){showToast('Connectez votre compte employé pour justifier une absence.');return;}
+  const date=document.getElementById('justificationDate')?.value||'';
+  const reason=document.getElementById('justificationReason')?.value.trim()||'';
+  if(!date||reason.length<5){showToast('Choisissez la date et expliquez le motif (5 caractères minimum).');return;}
+  try{
+    const {data:emp,error:empErr}=await ppSupabase.from('employees').select('id,organization_id').eq('auth_user_id',ppSession.user.id).maybeSingle();
+    if(empErr)throw empErr;if(!emp)throw new Error('Compte non associé à un profil employé.');
+    const {error}=await ppSupabase.from('absence_justifications').insert({organization_id:emp.organization_id,employee_id:emp.id,absence_date:date,reason,status:'pending'});
+    if(error)throw error;
+    document.getElementById('absenceJustificationForm').reset();
+    showToast('Justification envoyée au responsable.');
+    await loadMyAbsenceJustifications();await loadAbsenceJustifications();
+  }catch(err){showToast(err.code==='23505'?'Une justification existe déjà pour cette date.':(err.message||'Envoi impossible.'));}
+}
+async function loadMyAbsenceJustifications(){
+  const box=document.getElementById('myAbsenceJustifications');if(!box)return;
+  if(!ppSupabase||!ppSession){box.innerHTML='<p class="settings-help">Connectez votre compte employé pour voir vos justifications.</p>';return;}
+  try{
+    const {data:emp,error:empErr}=await ppSupabase.from('employees').select('id').eq('auth_user_id',ppSession.user.id).maybeSingle();
+    if(empErr)throw empErr;if(!emp){box.innerHTML='<p class="settings-help">Votre compte n’est pas associé à un employé.</p>';return;}
+    const {data,error}=await ppSupabase.from('absence_justifications').select('id,absence_date,reason,status,admin_comment,created_at').eq('employee_id',emp.id).order('absence_date',{ascending:false}).limit(20);
+    if(error)throw error;
+    box.innerHTML=(data||[]).map(r=>'<div class="leave-item"><div><strong>'+escapeHTML(ppDateLabel(r.absence_date))+'</strong><small>'+escapeHTML(r.reason)+'</small>'+(r.admin_comment?'<small>Réponse : '+escapeHTML(r.admin_comment)+'</small>':'')+'</div><span class="leave-status '+escapeHTML(r.status)+'">'+(r.status==='pending'?'En attente':r.status==='approved'?'Acceptée':'Refusée')+'</span></div>').join('')||'<p class="settings-help">Aucune justification envoyée.</p>';
+  }catch(err){box.innerHTML='<p class="settings-help">Impossible de charger vos justifications.</p>';console.error(err);}
+}
+async function loadAbsenceJustifications(){
+  const body=document.getElementById('absenceJustificationsTable');if(!body)return;
+  if(!ppSupabase||!ppSession||!ppOrganizationId){body.innerHTML='<tr><td colspan="6">Connectez un compte responsable.</td></tr>';return;}
+  try{
+    const {data,error}=await ppSupabase.from('absence_justifications').select('id,employee_id,absence_date,reason,status,created_at').order('created_at',{ascending:false}).limit(100);
+    if(error)throw error;
+    const ids=[...new Set((data||[]).map(r=>r.employee_id))];let names={};
+    if(ids.length){const {data:emps,error:ee}=await ppSupabase.from('employees').select('id,full_name').in('id',ids);if(ee)throw ee;(emps||[]).forEach(e=>names[e.id]=e.full_name);}
+    body.innerHTML=(data||[]).map(r=>'<tr><td>'+escapeHTML(names[r.employee_id]||'Employé')+'</td><td>'+escapeHTML(ppDateLabel(r.absence_date))+'</td><td>'+escapeHTML(r.reason)+'</td><td><span class="leave-status '+escapeHTML(r.status)+'">'+(r.status==='pending'?'En attente':r.status==='approved'?'Acceptée':'Refusée')+'</span></td><td>'+escapeHTML(ppDateLabel(r.created_at))+'</td><td>'+(r.status==='pending'?'<button class="ghost-btn" onclick="decideAbsenceJustification(\''+r.id+'\',\'approved\')">Accepter</button> <button class="ghost-btn" onclick="decideAbsenceJustification(\''+r.id+'\',\'rejected\')">Refuser</button>':'—')+'</td></tr>').join('')||'<tr><td colspan="6" style="text-align:center;padding:22px">Aucune justification reçue.</td></tr>';
+  }catch(err){console.error(err);body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:22px">Impossible de charger les justifications. Vérifiez les droits d’accès.</td></tr>';}
+}
+async function decideAbsenceJustification(id,status){
+  if(!ppSupabase||!ppSession)return;
+  try{
+    const {error}=await ppSupabase.from('absence_justifications').update({status,reviewed_by:ppSession.user.id,reviewed_at:new Date().toISOString()}).eq('id',id).eq('status','pending');
+    if(error)throw error;
+    showToast(status==='approved'?'Justification acceptée.':'Justification refusée.');
+    await loadAbsenceJustifications();await loadReportSummaryFromServer(reportRequestId);
+  }catch(err){showToast('Décision impossible : vérifiez vos permissions.');console.error(err);}
+}
+document.getElementById('absenceJustificationForm')?.addEventListener('submit',submitAbsenceJustification);
+\nasync function loadLeaveRequests(){
   const body=document.getElementById('leaveRequestsTable');if(!body)return;
   if(!ppSupabase||!ppSession||!ppOrganizationId){body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px">Connectez-vous à un compte administrateur relié à une organisation.</td></tr>';return;}
   try{const {data,error}=await ppSupabase.from('leave_requests').select('id,employee_id,request_type,start_date,end_date,reason,status,created_at').order('created_at',{ascending:false}).limit(100);if(error)throw error;const pendingCount=(data||[]).filter(r=>r.status==='pending').length;const nc=document.getElementById('notificationsCount');if(nc){nc.textContent=pendingCount;nc.hidden=pendingCount===0;}
