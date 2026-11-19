@@ -636,7 +636,7 @@ document.getElementById('leaveRequestForm')?.addEventListener('submit',submitLea
 
 async function ppLoadOrganizationSettings(){
   if(!ppSupabase||!ppOrganizationId)return;
-  try{const {data,error}=await ppSupabase.from('organization_settings').select('organization_name,start_time,end_time').eq('organization_id',ppOrganizationId).maybeSingle();if(error)throw error;if(data){const cfg=readAppSettings();cfg.organizationName=data.organization_name||cfg.organizationName;cfg.startTime=data.start_time||cfg.startTime;cfg.endTime=data.end_time||cfg.endTime;localStorage.setItem(PP_SETTINGS_KEY,JSON.stringify(cfg));refreshSettingsUI();}}catch(e){console.warn('Paramètres partagés non chargés :',e.message);}
+  try{const {data,error}=await ppSupabase.from('organization_settings').select('organization_name,start_time,end_time,working_days').eq('organization_id',ppOrganizationId).maybeSingle();if(error)throw error;if(data){const cfg=readAppSettings();cfg.organizationName=data.organization_name||cfg.organizationName;cfg.startTime=data.start_time||cfg.startTime;cfg.endTime=data.end_time||cfg.endTime;cfg.workingDays=Array.isArray(data.working_days)?data.working_days.map(Number):null;localStorage.setItem(PP_SETTINGS_KEY,JSON.stringify(cfg));refreshSettingsUI();}}catch(e){console.warn('Paramètres partagés non chargés :',e.message);}
 }
 function openSubscriptionInfo(){document.getElementById('subscriptionModal')?.classList.add('open');}
 function closeSubscriptionInfo(){document.getElementById('subscriptionModal')?.classList.remove('open');}
@@ -652,6 +652,7 @@ function refreshSettingsUI(){
   const orgInput=document.getElementById('settingsOrganizationName');if(orgInput)orgInput.value=cfg.organizationName||'PrésencePro';
   const startInput=document.getElementById('settingsStartTime');if(startInput)startInput.value=cfg.startTime||'08:00';
   const endInput=document.getElementById('settingsEndTime');if(endInput)endInput.value=cfg.endTime||'16:00';
+  document.querySelectorAll('input[name="workingDay"]').forEach(input=>{input.checked=Array.isArray(cfg.workingDays)&&cfg.workingDays.includes(Number(input.value));});
 }
 function openSettingsModal(tab='organization'){
   refreshSettingsUI();const modal=document.getElementById('settingsModal');if(!modal)return;
@@ -677,7 +678,14 @@ document.getElementById('settingsOrganizationForm')?.addEventListener('submit',a
 document.getElementById('settingsHoursForm')?.addEventListener('submit',async e=>{
   e.preventDefault();const start=document.getElementById('settingsStartTime').value,end=document.getElementById('settingsEndTime').value;
   if(!start||!end||start>=end){showToast('Choisissez une heure de début antérieure à l’heure de fin.');return;}
-  const cfg=readAppSettings();cfg.startTime=start;cfg.endTime=end;localStorage.setItem(PP_SETTINGS_KEY,JSON.stringify(cfg));if(ppSupabase&&ppSession&&ppOrganizationId){const {error}=await ppSupabase.from('organization_settings').upsert({organization_id:ppOrganizationId,start_time:start,end_time:end,organization_name:cfg.organizationName||'PrésencePro',updated_at:new Date().toISOString()},{onConflict:'organization_id'});if(error)console.warn('Horaires non synchronisés:',error.message);}refreshSettingsUI();employees.forEach(emp=>{if(emp.time&&emp.time!=='—')emp.status=ppAttendanceStatus(new Date(`${ppLocalDateISO()}T${emp.time}:00`).toISOString());});renderEmployees();renderRecent();renderHistory();ppRefreshDashboard();showToast('Horaires enregistrés sur cet appareil.');closeSettingsModal();
+  const workingDays=[...document.querySelectorAll('input[name="workingDay"]:checked')].map(input=>Number(input.value)).sort((a,b)=>a-b);
+  if(!workingDays.length){showToast('Sélectionnez au moins un jour habituel de travail.');return;}
+  const cfg=readAppSettings();cfg.startTime=start;cfg.endTime=end;cfg.workingDays=workingDays;
+  if(ppSupabase&&ppSession&&ppOrganizationId){
+    const {error}=await ppSupabase.from('organization_settings').upsert({organization_id:ppOrganizationId,start_time:start,end_time:end,working_days:workingDays,organization_name:cfg.organizationName||'PrésencePro',updated_at:new Date().toISOString()},{onConflict:'organization_id'});
+    if(error){console.error('Synchronisation du calendrier impossible:',error);showToast('Impossible de synchroniser les horaires et jours. Réessayez.');return;}
+  }
+  localStorage.setItem(PP_SETTINGS_KEY,JSON.stringify(cfg));refreshSettingsUI();employees.forEach(emp=>{if(emp.time&&emp.time!=='—')emp.status=ppAttendanceStatus(new Date(`${ppLocalDateISO()}T${emp.time}:00`).toISOString());});renderEmployees();renderRecent();renderHistory();ppRefreshDashboard();showToast('Horaires et jours de travail enregistrés.');closeSettingsModal();
 });
 refreshSettingsUI();
 
