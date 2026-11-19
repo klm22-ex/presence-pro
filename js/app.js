@@ -37,11 +37,11 @@ async function ppLoadOrganization(){
   }else{ppOrganizationId=data.organization_id;ppUserRole=data.role||null;}
 }
 function ppLocalDateISO(date=new Date()){const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,'0'),d=String(date.getDate()).padStart(2,'0');return `${y}-${m}-${d}`;}
-function ppTime(value){return value?new Date(value).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'—';}
+function ppTime(value){return value?new Date(value).toLocaleTimeString('fr-FR',{timeZone:'Africa/Kinshasa',hour:'2-digit',minute:'2-digit'}):'—';}
 function ppDateLabel(value){return value?new Date(value+'T00:00:00').toLocaleDateString('fr-FR'):'—';}
 function ppMinutes(value){if(!value||!/^\d{2}:\d{2}$/.test(value))return null;const [h,m]=value.split(':').map(Number);return h*60+m;}
 function ppGetSettings(){try{return JSON.parse(localStorage.getItem('presencepro_settings_v1')||'{}')}catch{return {};}}
-function ppAttendanceStatus(arrival){if(!arrival)return 'absent';const cfg=ppGetSettings(),cutoff=ppMinutes(cfg.startTime||'08:00');const dt=new Date(arrival);const mins=dt.getHours()*60+dt.getMinutes();return mins>(cutoff??480)+15?'late':'present';}
+function ppAttendanceStatus(arrival){if(!arrival)return 'absent';const cfg=ppGetSettings(),cutoff=ppMinutes(cfg.startTime||'08:00');const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Kinshasa',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(arrival)).map(p=>[p.type,p.value]));const mins=Number(parts.hour)*60+Number(parts.minute);return mins>(cutoff??480)+15?'late':'present';}
 function ppRefreshDashboard(){
   const total=employees.filter(e=>e.active!==false).length;
   const present=employees.filter(e=>e.active!==false&&e.status!=='absent').length;
