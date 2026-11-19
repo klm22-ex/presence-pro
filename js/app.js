@@ -746,16 +746,30 @@ async function submitAbsenceJustification(event){
   if(!ppSupabase||!ppSession){showToast('Connectez votre compte employé pour justifier une absence.');return;}
   const date=document.getElementById('justificationDate')?.value||'';
   const reason=document.getElementById('justificationReason')?.value.trim()||'';
+  const file=document.getElementById('justificationFile')?.files?.[0]||null;
+  const allowedTypes=['application/pdf','image/jpeg','image/png','image/webp'];
   if(!date||reason.length<5){showToast('Choisissez la date et expliquez le motif (5 caractères minimum).');return;}
+  if(file&&(!allowedTypes.includes(file.type)||file.size>5*1024*1024)){showToast('Joignez un PDF ou une image JPG, PNG ou WebP de 5 Mo maximum.');return;}
+  let uploadedPath=null;
   try{
     const {data:emp,error:empErr}=await ppSupabase.from('employees').select('id,organization_id').eq('auth_user_id',ppSession.user.id).maybeSingle();
     if(empErr)throw empErr;if(!emp)throw new Error('Compte non associé à un profil employé.');
-    const {error}=await ppSupabase.from('absence_justifications').insert({organization_id:emp.organization_id,employee_id:emp.id,absence_date:date,reason,status:'pending'});
+    if(file){
+      const ext={ 'application/pdf':'pdf','image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[file.type];
+      const nonce=window.crypto?.randomUUID?window.crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2);
+      uploadedPath=emp.organization_id+'/'+emp.id+'/'+date+'/'+nonce+'.'+ext;
+      const {error:uploadError}=await ppSupabase.storage.from('absence-justifications').upload(uploadedPath,file,{upsert:false,contentType:file.type,cacheControl:'3600'});
+      if(uploadError)throw uploadError;
+    }
+    const {error}=await ppSupabase.from('absence_justifications').insert({organization_id:emp.organization_id,employee_id:emp.id,absence_date:date,reason,status:'pending',attachment_path:uploadedPath});
     if(error)throw error;
     document.getElementById('absenceJustificationForm').reset();
     showToast('Justification envoyée au responsable.');
     await loadMyAbsenceJustifications();await loadAbsenceJustifications();
-  }catch(err){showToast(err.code==='23505'?'Une justification existe déjà pour cette date.':(err.message||'Envoi impossible.'));}
+  }catch(err){
+    if(uploadedPath)await ppSupabase.storage.from('absence-justifications').remove([uploadedPath]).catch(()=>{});
+    showToast(err.code==='23505'?'Une justification existe déjà pour cette date.':(err.message||'Envoi impossible.'));
+  }
 }
 async function loadMyAbsenceJustifications(){
   const box=document.getElementById('myAbsenceJustifications');if(!box)return;
@@ -763,21 +777,25 @@ async function loadMyAbsenceJustifications(){
   try{
     const {data:emp,error:empErr}=await ppSupabase.from('employees').select('id').eq('auth_user_id',ppSession.user.id).maybeSingle();
     if(empErr)throw empErr;if(!emp){box.innerHTML='<p class="settings-help">Votre compte n’est pas associé à un employé.</p>';return;}
-    const {data,error}=await ppSupabase.from('absence_justifications').select('id,absence_date,reason,status,admin_comment,created_at').eq('employee_id',emp.id).order('absence_date',{ascending:false}).limit(20);
+    const {data,error}=await ppSupabase.from('absence_justifications').select('id,absence_date,reason,status,admin_comment,created_at,attachment_path').eq('employee_id',emp.id).order('absence_date',{ascending:false}).limit(20);
     if(error)throw error;
-    box.innerHTML=(data||[]).map(r=>'<div class="leave-item"><div><strong>'+escapeHTML(ppDateLabel(r.absence_date))+'</strong><small>'+escapeHTML(r.reason)+'</small>'+(r.admin_comment?'<small>Réponse : '+escapeHTML(r.admin_comment)+'</small>':'')+'</div><span class="leave-status '+escapeHTML(r.status)+'">'+(r.status==='pending'?'En attente':r.status==='approved'?'Acceptée':'Refusée')+'</span></div>').join('')||'<p class="settings-help">Aucune justification envoyée.</p>';
+    const paths=(data||[]).filter(r=>r.attachment_path).map(r=>r.attachment_path),signed=new Map();
+    if(paths.length){const {data:urls,error:urlError}=await ppSupabase.storage.from('absence-justifications').createSignedUrls(paths,300);if(urlError)throw urlError;(urls||[]).forEach(x=>{if(x.path&&x.signedUrl)signed.set(x.path,x.signedUrl);});}
+    box.innerHTML=(data||[]).map(r=>'<div class="leave-item"><div><strong>'+escapeHTML(ppDateLabel(r.absence_date))+'</strong><small>'+escapeHTML(r.reason)+'</small>'+(r.attachment_path&&signed.has(r.attachment_path)?'<small><a href="'+escapeHTML(signed.get(r.attachment_path))+'" target="_blank" rel="noopener">Ouvrir ma pièce jointe</a></small>':'')+(r.admin_comment?'<small>Réponse : '+escapeHTML(r.admin_comment)+'</small>':'')+'</div><span class="leave-status '+escapeHTML(r.status)+'">'+(r.status==='pending'?'En attente':r.status==='approved'?'Acceptée':'Refusée')+'</span></div>').join('')||'<p class="settings-help">Aucune justification envoyée.</p>';
   }catch(err){box.innerHTML='<p class="settings-help">Impossible de charger vos justifications.</p>';console.error(err);}
 }
 async function loadAbsenceJustifications(){
   const body=document.getElementById('absenceJustificationsTable');if(!body)return;
-  if(!ppSupabase||!ppSession||!ppOrganizationId){body.innerHTML='<tr><td colspan="6">Connectez un compte responsable.</td></tr>';return;}
+  if(!ppSupabase||!ppSession||!ppOrganizationId){body.innerHTML='<tr><td colspan="7">Connectez un compte responsable.</td></tr>';return;}
   try{
-    const {data,error}=await ppSupabase.from('absence_justifications').select('id,employee_id,absence_date,reason,status,created_at').order('created_at',{ascending:false}).limit(100);
+    const {data,error}=await ppSupabase.from('absence_justifications').select('id,employee_id,absence_date,reason,status,created_at,attachment_path').order('created_at',{ascending:false}).limit(100);
     if(error)throw error;
     const ids=[...new Set((data||[]).map(r=>r.employee_id))];let names={};
     if(ids.length){const {data:emps,error:ee}=await ppSupabase.from('employees').select('id,full_name').in('id',ids);if(ee)throw ee;(emps||[]).forEach(e=>names[e.id]=e.full_name);}
-    body.innerHTML=(data||[]).map(r=>'<tr><td>'+escapeHTML(names[r.employee_id]||'Employé')+'</td><td>'+escapeHTML(ppDateLabel(r.absence_date))+'</td><td>'+escapeHTML(r.reason)+'</td><td><span class="leave-status '+escapeHTML(r.status)+'">'+(r.status==='pending'?'En attente':r.status==='approved'?'Acceptée':'Refusée')+'</span></td><td>'+escapeHTML(ppDateLabel(r.created_at))+'</td><td>'+(r.status==='pending'?'<button class="ghost-btn" onclick="decideAbsenceJustification(\''+r.id+'\',\'approved\')">Accepter</button> <button class="ghost-btn" onclick="decideAbsenceJustification(\''+r.id+'\',\'rejected\')">Refuser</button>':'—')+'</td></tr>').join('')||'<tr><td colspan="6" style="text-align:center;padding:22px">Aucune justification reçue.</td></tr>';
-  }catch(err){console.error(err);body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:22px">Impossible de charger les justifications. Vérifiez les droits d’accès.</td></tr>';}
+    const paths=(data||[]).filter(r=>r.attachment_path).map(r=>r.attachment_path),signed=new Map();
+    if(paths.length){const {data:urls,error:urlError}=await ppSupabase.storage.from('absence-justifications').createSignedUrls(paths,300);if(urlError)throw urlError;(urls||[]).forEach(x=>{if(x.path&&x.signedUrl)signed.set(x.path,x.signedUrl);});}
+    body.innerHTML=(data||[]).map(r=>'<tr><td>'+escapeHTML(names[r.employee_id]||'Employé')+'</td><td>'+escapeHTML(ppDateLabel(r.absence_date))+'</td><td>'+escapeHTML(r.reason)+'</td><td>'+(r.attachment_path&&signed.has(r.attachment_path)?'<a href="'+escapeHTML(signed.get(r.attachment_path))+'" target="_blank" rel="noopener">Ouvrir</a>':'—')+'</td><td><span class="leave-status '+escapeHTML(r.status)+'">'+(r.status==='pending'?'En attente':r.status==='approved'?'Acceptée':'Refusée')+'</span></td><td>'+escapeHTML(ppDateLabel(r.created_at))+'</td><td>'+(r.status==='pending'?'<button class="ghost-btn" onclick="decideAbsenceJustification(\''+r.id+'\',\'approved\')">Accepter</button> <button class="ghost-btn" onclick="decideAbsenceJustification(\''+r.id+'\',\'rejected\')">Refuser</button>':'—')+'</td></tr>').join('')||'<tr><td colspan="7" style="text-align:center;padding:22px">Aucune justification reçue.</td></tr>';
+  }catch(err){console.error(err);body.innerHTML='<tr><td colspan="7" style="text-align:center;padding:22px">Impossible de charger les justifications. Vérifiez les droits d’accès.</td></tr>';}
 }
 async function decideAbsenceJustification(id,status){
   if(!ppSupabase||!ppSession)return;
