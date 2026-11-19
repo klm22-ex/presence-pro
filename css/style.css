@@ -550,3 +550,5 @@ body{background:#edf3fc;color:#142344}
 .history-pagination-actions{display:flex;align-items:center;gap:10px}
 .history-pagination button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:600px){.history-pagination{align-items:flex-start;flex-direction:column}.history-pagination-actions{width:100%;justify-content:space-between;gap:6px}.history-pagination-actions .ghost-btn{padding:9px 11px}}
+
+.absence-register{margin-top:18px}.absence-total{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;padding:0 10px;border-radius:18px;background:var(--surface-soft,#f1f4f8);font-weight:800}.absence-review-label{display:inline-flex;padding:5px 9px;border-radius:20px;background:#fff4df;color:#946200;font-size:11px;font-weight:700;white-space:nowrap}
