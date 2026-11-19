@@ -488,6 +488,9 @@ async function loadReportSummaryFromServer(requestId){
     if(!employeesList.length){
       setMetric('reportPresenceRate','0%');setMetric('reportAbsenceCount','0');setMetric('reportLeaveDays','0');setMetric('reportLateRate','0%');setMetric('reportRecordCount','0');absenceRegisterRows=[];renderAbsenceRegister();return;
     }
+    const shiftEnd=ppMinutes(cfg.endTime||'16:00')??960;
+    let effectiveEndDate=endDate<today?endDate:today;
+    if(effectiveEndDate===today&&nowMinutes<shiftEnd){const previous=new Date(Date.parse(today+'T00:00:00Z')-86400000);effectiveEndDate=previous.toISOString().slice(0,10);}
     let leaveRows=[],leaveOffset=0;
     while(true){
       const {data,error}=await ppSupabase.from('leave_requests').select('employee_id,start_date,end_date').eq('organization_id',ppOrganizationId).eq('status','approved').lte('start_date',endDate).gte('end_date',startDate).order('start_date',{ascending:true}).range(leaveOffset,leaveOffset+499);
@@ -502,7 +505,7 @@ async function loadReportSummaryFromServer(requestId){
     }
     const employeeIds=employeesList.map(e=>e.id),employeeIdSet=new Set(employeeIds),attendanceByDay=new Map();let recordCount=0,attOffset=0;
     while(true){
-      const {data,error}=await ppSupabase.from('attendance').select('employee_id,attendance_date,arrival_at').eq('organization_id',ppOrganizationId).gte('attendance_date',startDate).lte('attendance_date',endDate).order('attendance_date',{ascending:true}).range(attOffset,attOffset+499);
+      const {data,error}=await ppSupabase.from('attendance').select('employee_id,attendance_date,arrival_at').eq('organization_id',ppOrganizationId) .gte('attendance_date',startDate).lte('attendance_date',effectiveEndDate).order('attendance_date',{ascending:true}).range(attOffset,attOffset+499);
       if(error)throw error;
       const batch=data||[];
       for(const row of batch){
@@ -514,13 +517,12 @@ async function loadReportSummaryFromServer(requestId){
       if(requestId!==reportRequestId)return;
     }
     let expectedDays=0,presentDays=0,absenceDays=0,leaveDays=0,lateDays=0;
-    const shiftEnd=ppMinutes(cfg.endTime||'16:00')??960;
-    let effectiveEndDate=endDate<today?endDate:today;
-    if(effectiveEndDate===today&&nowMinutes<shiftEnd){const previous=new Date(Date.parse(today+'T00:00:00Z')-86400000);effectiveEndDate=previous.toISOString().slice(0,10);}
     const startMs=Date.parse(startDate+'T00:00:00Z'),endMs=Date.parse(effectiveEndDate+'T00:00:00Z');
     absenceRegisterRows=[];
     for(const emp of employeesList){
-      const empStart=Math.max(startMs,emp.created_at?Date.parse(emp.created_at.slice(0,10)+'T00:00:00Z'):startMs);
+      const createdParts=emp.created_at?Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Kinshasa',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(emp.created_at)).map(p=>[p.type,p.value])):null;
+      const createdIso=createdParts?createdParts.year+'-'+createdParts.month+'-'+createdParts.day:startDate;
+      const empStart=Math.max(startMs,Date.parse(createdIso+'T00:00:00Z'));
       const approved=leaveByEmployee.get(emp.id)||[];
       for(let ms=empStart;ms<=endMs;ms+=86400000){
         const d=new Date(ms),weekday=d.getUTCDay()===0?7:d.getUTCDay();
