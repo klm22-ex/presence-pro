@@ -498,6 +498,14 @@ async function loadReportSummaryFromServer(requestId){
       const batch=data||[];leaveRows.push(...batch);if(batch.length<500)break;leaveOffset+=500;
       if(requestId!==reportRequestId)return;
     }
+    let justificationRows=[],justificationOffset=0;
+    while(true){
+      const {data,error}=await ppSupabase.from('absence_justifications').select('employee_id,absence_date,status').eq('organization_id',ppOrganizationId).gte('absence_date',startDate).lte('absence_date',endDate).order('absence_date',{ascending:true}).range(justificationOffset,justificationOffset+499);
+      if(error)throw error;
+      const batch=data||[];justificationRows.push(...batch);if(batch.length<500)break;justificationOffset+=500;
+      if(requestId!==reportRequestId)return;
+    }
+    const justificationByDay=new Map(justificationRows.map(r=>[r.employee_id+'|'+r.absence_date,r.status]));
     const leaveByEmployee=new Map();
     for(const leave of leaveRows){
       if(!leaveByEmployee.has(leave.employee_id))leaveByEmployee.set(leave.employee_id,[]);
@@ -533,7 +541,7 @@ async function loadReportSummaryFromServer(requestId){
         expectedDays++;
         const attendance=attendanceByDay.get(emp.id+'|'+iso);
         if(attendance?.arrival_at){presentDays++;if(ppAttendanceStatus(attendance.arrival_at)==='late')lateDays++;}
-        else{absenceDays++;absenceRegisterRows.push({date:iso,name:emp.full_name||'Employé',department:emp.department||'Autre'});}
+        else{absenceDays++;const justificationStatus=justificationByDay.get(emp.id+'|'+iso);const reviewLabel=justificationStatus==='approved'?'Justifiée':justificationStatus==='pending'?'En attente':justificationStatus==='rejected'?'Refusée':'À vérifier';absenceRegisterRows.push({date:iso,name:emp.full_name||'Employé',department:emp.department||'Autre',reviewLabel});}
       }
     }
     if(requestId!==reportRequestId)return;
