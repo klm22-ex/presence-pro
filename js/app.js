@@ -446,25 +446,103 @@ async function loadReportPageFromServer(){
   }catch(error){if(requestId!==reportRequestId)return;console.error('Chargement du rapport impossible:',error);body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:#b45309">Impossible de charger le rapport. Réessayez.</td></tr>';const count=document.getElementById('reportRecordCount');if(count)count.textContent='—';}
 }
 async function loadReportSummaryFromServer(requestId){
+  const setMetric=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
   try{
-    const batchSize=500;let offset=0,records=0,present=0,late=0;
+    const today=ppLocalDateISO(),fromInput=document.getElementById('reportFrom')?.value||'',toInput=document.getElementById('reportTo')?.value||'';
+    const startDate=fromInput||today.slice(0,7)+'-01',endDate=toInput||today;
+    if(startDate>endDate)throw new Error('La date de début doit précéder la date de fin.');
+    const cfg=ppGetSettings(),workingDays=Array.isArray(cfg.workingDays)?cfg.workingDays.map(Number):[];
+    const periodLabel=fromInput||toInput?(startDate+' → '+endDate):('Mois en cours : '+startDate+' → '+endDate);
+    setMetric('reportPresenceCaption','Sur les journées prévues · '+periodLabel);
+    setMetric('reportAbsenceCaption','Journées prévues sans arrivée · '+periodLabel);
+    setMetric('reportLeaveCaption','Journées ouvrées couvertes · '+periodLabel);
+    setMetric('reportLateCaption','Parmi les arrivées enregistrées · '+periodLabel);
+    setMetric('reportRecordCaption','Pointages sur la période · '+periodLabel);
+    if(!workingDays.length){
+      ['reportPresenceRate','reportAbsenceCount','reportLeaveDays','reportLateRate'].forEach(id=>setMetric(id,'—'));
+      setMetric('reportPresenceCaption','Configurez les jours de travail dans Paramètres.');
+      setMetric('reportAbsenceCaption','Le calcul est désactivé sans calendrier.');
+      setMetric('reportLeaveCaption','Le calcul est désactivé sans calendrier.');
+      setMetric('reportLateCaption','En attente du calendrier de travail.');
+      setMetric('reportRecordCount','—');
+      return;
+    }
+    const dept=document.getElementById('reportDepartment')?.value||'all';
+    let employeesList=[],offset=0;
     while(true){
-      const {data,error}=await buildReportQuery().range(offset,offset+batchSize-1);
-      if(error)throw error;if(requestId!==reportRequestId)return;
-      const batch=data||[];
-      for(const row of batch){records++;if(row.arrival_at){present++;if(ppAttendanceStatus(row.arrival_at)==='late')late++;}}
-      if(batch.length<batchSize)break;offset+=batchSize;
+      let q=ppSupabase.from('employees').select('id,department,created_at').eq('organization_id',ppOrganizationId).eq('active',true).order('created_at',{ascending:true}).range(offset,offset+499);
+      if(dept!=='all')q=q.eq('department',dept);
+      const {data,error}=await q;if(error)throw error;
+      const batch=data||[];employeesList.push(...batch);if(batch.length<500)break;offset+=500;
+      if(requestId!==reportRequestId)return;
     }
     if(requestId!==reportRequestId)return;
-    const presenceRate=document.getElementById('reportPresenceRate'),lateRate=document.getElementById('reportLateRate'),recordCount=document.getElementById('reportRecordCount');
-    if(presenceRate)presenceRate.textContent=records?Math.round(present/records*100)+'%':'0%';
-    if(lateRate)lateRate.textContent=records?Math.round(late/records*100)+'%':'0%';
-    if(recordCount)recordCount.textContent=records;
-  }catch(error){if(requestId===reportRequestId){console.error('Calcul des indicateurs impossible:',error);const p=document.getElementById('reportPresenceRate'),l=document.getElementById('reportLateRate');if(p)p.textContent='—';if(l)l.textContent='—';}}
+    if(!employeesList.length){
+      setMetric('reportPresenceRate','0%');setMetric('reportAbsenceCount','0');setMetric('reportLeaveDays','0');setMetric('reportLateRate','0%');setMetric('reportRecordCount','0');return;
+    }
+    let leaveRows=[],leaveOffset=0;
+    while(true){
+      const {data,error}=await ppSupabase.from('leave_requests').select('employee_id,start_date,end_date').eq('organization_id',ppOrganizationId).eq('status','approved').lte('start_date',endDate).gte('end_date',startDate).range(leaveOffset,leaveOffset+499);
+      if(error)throw error;
+      const batch=data||[];leaveRows.push(...batch);if(batch.length<500)break;leaveOffset+=500;
+      if(requestId!==reportRequestId)return;
+    }
+    const leaveByEmployee=new Map();
+    for(const leave of leaveRows){
+      if(!leaveByEmployee.has(leave.employee_id))leaveByEmployee.set(leave.employee_id,[]);
+      leaveByEmployee.get(leave.employee_id).push(leave);
+    }
+    const employeeIds=employeesList.map(e=>e.id),attendanceByDay=new Map();let recordCount=0,attOffset=0;
+    while(true){
+      const {data,error}=await ppSupabase.from('attendance').select('employee_id,attendance_date,arrival_at').eq('organization_id',ppOrganizationId).gte('attendance_date',startDate).lte('attendance_date',endDate).range(attOffset,attOffset+499);
+      if(error)throw error;
+      const batch=data||[];
+      for(const row of batch){
+        if(!employeeIds.includes(row.employee_id))continue;
+        recordCount++;
+        if(row.arrival_at)attendanceByDay.set(row.employee_id+'|'+row.attendance_date,row);
+      }
+      if(batch.length<500)break;attOffset+=500;
+      if(requestId!==reportRequestId)return;
+    }
+    let expectedDays=0,presentDays=0,absenceDays=0,leaveDays=0,lateDays=0;
+    const startMs=Date.parse(startDate+'T00:00:00Z'),endMs=Date.parse(endDate+'T00:00:00Z');
+    for(const emp of employeesList){
+      const empStart=Math.max(startMs,emp.created_at?Date.parse(emp.created_at.slice(0,10)+'T00:00:00Z'):startMs);
+      const approved=leaveByEmployee.get(emp.id)||[];
+      for(let ms=empStart;ms<=endMs;ms+=86400000){
+        const d=new Date(ms),weekday=d.getUTCDay()===0?7:d.getUTCDay();
+        if(!workingDays.includes(weekday))continue;
+        const iso=d.toISOString().slice(0,10);
+        const onLeave=approved.some(l=>l.start_date<=iso&&l.end_date>=iso);
+        if(onLeave){leaveDays++;continue;}
+        expectedDays++;
+        const attendance=attendanceByDay.get(emp.id+'|'+iso);
+        if(attendance?.arrival_at){presentDays++;if(ppAttendanceStatus(attendance.arrival_at)==='late')lateDays++;}
+        else absenceDays++;
+      }
+    }
+    if(requestId!==reportRequestId)return;
+    setMetric('reportPresenceRate',expectedDays?Math.round(presentDays/expectedDays*100)+'%':'—');
+    setMetric('reportAbsenceCount',String(absenceDays));
+    setMetric('reportLeaveDays',String(leaveDays));
+    setMetric('reportLateRate',presentDays?Math.round(lateDays/presentDays*100)+'%':'0%');
+    setMetric('reportRecordCount',String(recordCount));
+    setMetric('reportPresenceCaption',presentDays+' présentées / '+expectedDays+' journées attendues');
+    setMetric('reportAbsenceCaption','Journées prévues sans arrivée');
+    setMetric('reportLeaveCaption','Journées ouvrées exclues du calcul');
+    setMetric('reportLateCaption',lateDays+' retard(s) sur '+presentDays+' arrivée(s)');
+    setMetric('reportRecordCaption','Pointages enregistrés sur la période');
+  }catch(error){
+    if(requestId===reportRequestId){
+      console.error('Calcul des indicateurs RH impossible:',error);
+      ['reportPresenceRate','reportAbsenceCount','reportLeaveDays','reportLateRate','reportRecordCount'].forEach(id=>setMetric(id,'—'));
+      setMetric('reportPresenceCaption',error.message||'Calcul indisponible. Vérifiez les filtres et permissions.');
+    }
+  }
 }
 function renderReportRows(rows,start,total,pages){
-  const present=rows.filter(r=>r[2]!=='—').length,late=rows.filter(r=>r[4]==='late').length,rate=rows.length?Math.round(present/rows.length*100):0,lateRate=rows.length?Math.round(late/rows.length*100):0;
-  const a=document.getElementById('reportPresenceRate');if(a)a.textContent=rate+'%';const b=document.getElementById('reportLateRate');if(b)b.textContent=lateRate+'%';const c=document.getElementById('reportRecordCount');if(c)c.textContent=total;
+  const c=document.getElementById('reportRecordCount');if(c)c.textContent=total;
   const body=document.getElementById('reportTable');if(body)body.innerHTML=rows.map(r=>`<tr><td>${escapeHTML(r[0])}</td><td>${escapeHTML(r[1])}</td><td>${escapeHTML(r[2])}</td><td>${escapeHTML(r[3])}</td><td>${escapeHTML(labels[r[4]]||r[4])}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:24px">Aucune donnée pour cette période.</td></tr>';
   const info=document.getElementById('reportPageInfo');if(info)info.textContent=total?'Affichage '+(start+1)+'–'+Math.min(start+rows.length,total)+' sur '+total:'Aucun résultat';
   const prev=document.getElementById('reportPrev'),next=document.getElementById('reportNext');if(prev)prev.disabled=reportPage<=1;if(next)next.disabled=reportPage>=pages;
