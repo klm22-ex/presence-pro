@@ -94,7 +94,7 @@
           <article class="panel agent-summary"><div class="panel-head"><div><h2>Mon dernier pointage</h2><p>Les informations de votre présence apparaîtront ici.</p></div><button class="ghost-btn" onclick="navigateTo('agentHistory')">Voir mon historique →</button></div><div id="agentLastAttendance" class="agent-last">Connectez votre compte employé pour afficher vos pointages.</div></article>
           <article class="panel agent-leave-panel"><div class="panel-head"><div><h2>Demander un congé</h2><p>Envoyez une demande à votre responsable.</p></div></div><form id="leaveRequestForm" class="leave-form"><label>Type de demande<select id="leaveType"><option value="conge">Congé</option><option value="absence">Absence</option><option value="permission">Permission</option></select></label><label>Du<input type="date" id="leaveStart" required></label><label>Au<input type="date" id="leaveEnd" required></label><label>Motif<textarea id="leaveReason" rows="2" maxlength="500" required placeholder="Expliquez brièvement votre demande"></textarea></label><button class="primary-btn" type="submit">Envoyer la demande</button></form><div id="myLeaveRequests" class="leave-list"></div>
           <div class="panel-head" style="margin-top:22px"><div><h2>Justifier une absence passée</h2><p>Envoyez un motif au responsable pour examen.</p></div></div>
-          <form id="absenceJustificationForm" class="leave-form"><label>Date de l’absence<input type="date" id="justificationDate" required></label><label>Motif<textarea id="justificationReason" rows="2" maxlength="1000" minlength="5" required placeholder="Expliquez la raison de votre absence"></textarea></label><button class="primary-btn" type="submit">Envoyer la justification</button></form>
+          <form id="absenceJustificationForm" class="leave-form"><label>Date de l’absence<input type="date" id="justificationDate" required></label><label>Motif<textarea id="justificationReason" rows="2" maxlength="1000" minlength="5" required placeholder="Expliquez la raison de votre absence"></textarea></label><label>Pièce justificative (facultatif)<input type="file" id="justificationFile" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"><small class="settings-help">PDF ou image JPG, PNG, WebP — 5 Mo maximum. Seuls vous et les responsables autorisés pourront l’ouvrir.</small></label><button class="primary-btn" type="submit">Envoyer la justification</button></form>
           <div id="myAbsenceJustifications" class="leave-list"></div></article>
         </section>
 
@@ -239,7 +239,7 @@
         <section class="page-section" id="leaveRequests">
           <div class="section-heading"><div><p class="eyebrow">RESSOURCES HUMAINES</p><h1>Congés & absences</h1><p>Examinez les demandes envoyées par les employés.</p></div><button class="ghost-btn" onclick="loadLeaveRequests()">Actualiser</button></div>
           <article class="panel"><div class="table-wrap"><table><thead><tr><th>Employé</th><th>Type</th><th>Période</th><th>Motif</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="leaveRequestsTable"><tr><td colspan="6" style="text-align:center;padding:24px">Connectez Supabase et actualisez les demandes.</td></tr></tbody></table></div></article>
-          <article class="panel" style="margin-top:18px"><div class="panel-head"><div><h2>Justifications d’absence</h2><p>Acceptez ou refusez les motifs transmis après une absence.</p></div><button class="ghost-btn" type="button" onclick="loadAbsenceJustifications()">Actualiser</button></div><div class="table-wrap"><table><thead><tr><th>Employé</th><th>Date absente</th><th>Motif</th><th>Statut</th><th>Envoyée le</th><th>Décision</th></tr></thead><tbody id="absenceJustificationsTable"><tr><td colspan="6">Aucune donnée chargée.</td></tr></tbody></table></div></article>
+          <article class="panel" style="margin-top:18px"><div class="panel-head"><div><h2>Justifications d’absence</h2><p>Acceptez ou refusez les motifs transmis après une absence.</p></div><button class="ghost-btn" type="button" onclick="loadAbsenceJustifications()">Actualiser</button></div><div class="table-wrap"><table><thead><tr><th>Employé</th><th>Date absente</th><th>Motif</th><th>Pièce jointe</th><th>Statut</th><th>Envoyée le</th><th>Décision</th></tr></thead><tbody id="absenceJustificationsTable"><tr><td colspan="6">Aucune donnée chargée.</td></tr></tbody></table></div></article>
           <p class="security-note">Les demandes de congé ne modifient pas automatiquement le statut de présence. La validation reste une décision du responsable.</p>
         </section>
 
@@ -362,6 +362,6 @@
   <script src="js/supabase-config.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="js/app.js?v=20261119-absence-justifications"></script>
+  <script src="js/app.js?v=20261119-private-absence-files"></script>
 </body>
 </html>
