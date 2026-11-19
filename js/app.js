@@ -83,7 +83,7 @@ async function ppLoadEmployees(){
   for(const e of employeeRows){
     const a=todayAttendance.get(e.id);
     const arrival=a?.arrival_at||null;
-    employees.push({id:e.id,name:e.full_name,email:e.email||'',code:e.code,department:e.department||'Autre',active:e.active!==false,status:ppAttendanceStatus(arrival),time:ppTime(arrival),initials:e.full_name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase(),photo:e.photo_path?photoUrls.get(e.photo_path)||'':'',authUserId:e.auth_user_id||null,accountLinked:!!e.auth_user_id,fingerprint:false,nativeBiometric:false,biometricId:null,supabaseId:e.id});
+    employees.push({id:e.id,name:e.full_name,email:e.email||'',code:e.code,department:e.department||'Autre',active:e.active!==false,status:ppAttendanceStatus(arrival),time:ppTime(arrival),initials:e.full_name.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase(),photo:e.photo_path?photoUrls.get(e.photo_path)||'':'',authUserId:e.auth_user_id||null,accountLinked:!!e.auth_user_id,hireDate:e.hire_date||'',exitDate:e.exit_date||'',fingerprint:false,nativeBiometric:false,biometricId:null,supabaseId:e.id});
   }
   history.splice(0,history.length,...attendanceRows.map(r=>{const emp=employeeMap.get(r.employee_id);return [ppDateLabel(r.attendance_date),emp?.full_name||'Employé supprimé',ppTime(r.arrival_at),ppTime(r.departure_at),r.arrival_at?ppAttendanceStatus(r.arrival_at):'absent'];}));
   renderRecent();renderEmployees();renderHistory();renderBiometric();ppRefreshDashboard();
@@ -165,7 +165,7 @@ async function ppInit(){
   await ppBootCloud();
 }
 async function ppBootCloud(){
-  try{await ppLoadOrganization();await ppLoadEmployees();await ppLoadOrganizationSettings();await loadLeaveRequests();await loadAbsenceJustifications();}
+  try{await ppLoadOrganization();await ppLoadEmployees();await ppLoadOrganizationSettings();await loadLeaveRequests();await loadAbsenceJustifications();await loadCompanyCalendar();}
   catch(err){console.error(err);showToast('Connexion Supabase : '+(err.message||'erreur'));}
 }
 const employees = [
@@ -317,6 +317,8 @@ async function showEmployeeDetails(employeeId){
     <label>E-mail professionnel<input id="editEmployeeEmail" type="email" required maxlength="254" value="${escapeHTML(emp.email||"")}" placeholder="agent@entreprise.com"></label>
     <label>Matricule<input id="editEmployeeCode" required maxlength="40" value="${escapeHTML(emp.code)}"></label>
     <label>Département<select id="editEmployeeDepartment"><option ${emp.department==='Administration'?'selected':''}>Administration</option><option ${emp.department==='Finance'?'selected':''}>Finance</option><option ${emp.department==='Ressources humaines'?'selected':''}>Ressources humaines</option><option ${emp.department==='Informatique'?'selected':''}>Informatique</option><option ${emp.department==='Enseignement'?'selected':''}>Enseignement</option><option ${emp.department==='Autre'?'selected':''}>Autre</option></select></label>
+    <label>Date d’entrée<input id="editEmployeeHireDate" type="date" value="${escapeHTML(emp.hireDate||'')}"></label>
+    <label>Date de sortie (facultatif)<input id="editEmployeeExitDate" type="date" value="${escapeHTML(emp.exitDate||'')}"></label>
     <label>Remplacer la photo (facultatif)<input id="editEmployeePhoto" type="file" accept="image/*"></label>
     <label class="employee-active-toggle"><input id="editEmployeeActive" type="checkbox" ${emp.active===false?'':'checked'}> Employé actif</label>
     <div class="employee-detail-grid"><div><small>Statut du jour</small><strong>${escapeHTML(labels[emp.status]||emp.status||"Non renseigné")}</strong></div><div><small>Dernier pointage</small><strong>${escapeHTML(emp.time||"—")}</strong></div><div><small>Compte agent</small><strong>${emp.accountLinked?"Associé":"Non associé"}</strong></div></div>
@@ -331,12 +333,15 @@ async function showEmployeeDetails(employeeId){
     const code=document.getElementById('editEmployeeCode').value.trim().toUpperCase();
     const department=document.getElementById('editEmployeeDepartment').value;
     const active=document.getElementById('editEmployeeActive').checked;
+    const hireDate=document.getElementById('editEmployeeHireDate').value||null;
+    const exitDate=document.getElementById('editEmployeeExitDate').value||null;
+    if(hireDate&&exitDate&&exitDate<hireDate){showToast('La date de sortie doit être égale ou postérieure à la date d’entrée.');saveButton.disabled=false;saveButton.textContent='Enregistrer les modifications';return;}
     const photoFile=document.getElementById('editEmployeePhoto').files[0];
     if(employees.some(other=>other!==emp&&other.code.toUpperCase()===code)){showToast('Ce matricule est déjà utilisé.');saveButton.disabled=false;saveButton.textContent='Enregistrer les modifications';return;}
     try{
       const realId=emp.supabaseId||((typeof emp.id==='string'&&emp.id.includes('-'))?emp.id:null);
       if(ppSupabase&&ppSession&&ppOrganizationId&&realId){
-        const patch={full_name:name,email,code,department,active};
+        const patch={full_name:name,email,code,department,active,hire_date:hireDate,exit_date:exitDate};
         if(photoFile){
           const optimizedPhoto=await ppCompressEmployeePhoto(photoFile);
           const photoPath=`${ppOrganizationId}/${realId}.jpg`;
@@ -350,7 +355,7 @@ async function showEmployeeDetails(employeeId){
         const refreshed=employees.find(x=>String(x.id)===String(realId));
         if(refreshed)showEmployeeDetails(refreshed.id);
       }else{
-        emp.name=name;emp.email=email;emp.code=code;emp.department=department;emp.active=active;
+        emp.name=name;emp.email=email;emp.code=code;emp.department=department;emp.active=active;emp.hireDate=hireDate;emp.exitDate=exitDate;
         if(photoFile){emp.photo=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(photoFile);});}
         emp.initials=name.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();
         renderEmployees();renderRecent();renderBiometric();showEmployeeDetails(emp.id);
@@ -451,6 +456,26 @@ async function loadReportPageFromServer(){
     loadReportSummaryFromServer(requestId);
   }catch(error){if(requestId!==reportRequestId)return;console.error('Chargement du rapport impossible:',error);body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:#b45309">Impossible de charger le rapport. Réessayez.</td></tr>';const count=document.getElementById('reportRecordCount');if(count)count.textContent='—';}
 }
+
+async function loadCompanyCalendar(){
+ const body=document.getElementById('companyCalendarTable');if(!body)return;
+ if(!ppSupabase||!ppSession||!ppOrganizationId){body.innerHTML='<tr><td colspan="4">Connectez-vous comme responsable.</td></tr>';return;}
+ try{const {data,error}=await ppSupabase.from('company_calendar_days').select('id,calendar_date,label,day_type').eq('organization_id',ppOrganizationId).order('calendar_date',{ascending:true}).limit(300);if(error)throw error;
+ body.innerHTML=(data||[]).map(d=>'<tr><td>'+escapeHTML(ppDateLabel(d.calendar_date))+'</td><td>'+escapeHTML(d.label)+'</td><td>'+escapeHTML(d.day_type==='holiday'?'Jour férié':d.day_type==='working_exception'?'Jour travaillé exceptionnel':'Jour non travaillé')+'</td><td><button class="ghost-btn" type="button" onclick="deleteCompanyCalendarDay(\''+d.id+'\')">Supprimer</button></td></tr>').join('')||'<tr><td colspan="4">Aucun jour particulier.</td></tr>';
+ }catch(e){console.error(e);body.innerHTML='<tr><td colspan="4">Calendrier indisponible. Vérifiez les permissions.</td></tr>';}
+}
+document.getElementById('companyCalendarForm')?.addEventListener('submit',async e=>{
+ e.preventDefault();if(!ppSupabase||!ppSession||!ppOrganizationId){showToast('Connectez-vous comme administrateur.');return;}
+ const calendar_date=document.getElementById('calendarDate').value,label=document.getElementById('calendarLabel').value.trim(),day_type=document.getElementById('calendarType').value;
+ if(!calendar_date||label.length<2){showToast('Indiquez une date et un libellé valide.');return;}
+ try{const {error}=await ppSupabase.from('company_calendar_days').upsert({organization_id:ppOrganizationId,calendar_date,label,day_type,created_by:ppSession.user.id},{onConflict:'organization_id,calendar_date'});if(error)throw error;e.target.reset();await loadCompanyCalendar();await loadReportSummaryFromServer(reportRequestId);showToast('Jour ajouté au calendrier.');}
+ catch(err){console.error(err);showToast('Enregistrement impossible : '+(err.message||'permissions insuffisantes.'));}
+});
+async function deleteCompanyCalendarDay(id){
+ if(!confirm('Supprimer ce jour du calendrier ?'))return;
+ try{const {error}=await ppSupabase.from('company_calendar_days').delete().eq('id',id);if(error)throw error;await loadCompanyCalendar();await loadReportSummaryFromServer(reportRequestId);showToast('Jour supprimé.');}
+ catch(err){console.error(err);showToast('Suppression impossible : vérifiez les droits.');}
+}
 async function loadReportSummaryFromServer(requestId){
   const setMetric=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
   try{
@@ -478,7 +503,7 @@ async function loadReportSummaryFromServer(requestId){
     const dept=document.getElementById('reportDepartment')?.value||'all';
     let employeesList=[],offset=0;
     while(true){
-      let q=ppSupabase.from('employees').select('id,full_name,department,created_at').eq('organization_id',ppOrganizationId).eq('active',true).order('created_at',{ascending:true}).range(offset,offset+499);
+      let q=ppSupabase.from('employees').select('id,full_name,department,created_at,hire_date,exit_date').eq('organization_id',ppOrganizationId).eq('active',true).order('created_at',{ascending:true}).range(offset,offset+499);
       if(dept!=='all')q=q.eq('department',dept);
       const {data,error}=await q;if(error)throw error;
       const batch=data||[];employeesList.push(...batch);if(batch.length<500)break;offset+=500;
@@ -524,18 +549,26 @@ async function loadReportSummaryFromServer(requestId){
       if(batch.length<500)break;attOffset+=500;
       if(requestId!==reportRequestId)return;
     }
+    const {data:calendarRows,error:calendarError}=await ppSupabase.from('company_calendar_days').select('calendar_date,day_type,label').eq('organization_id',ppOrganizationId).gte('calendar_date',startDate).lte('calendar_date',effectiveEndDate);
+    if(calendarError)throw calendarError;
+    const calendarByDate=new Map((calendarRows||[]).map(day=>[day.calendar_date,day]));
     let expectedDays=0,presentDays=0,absenceDays=0,leaveDays=0,lateDays=0;
     const startMs=Date.parse(startDate+'T00:00:00Z'),endMs=Date.parse(effectiveEndDate+'T00:00:00Z');
     absenceRegisterRows=[];
     for(const emp of employeesList){
       const createdParts=emp.created_at?Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Kinshasa',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(emp.created_at)).map(p=>[p.type,p.value])):null;
       const createdIso=createdParts?createdParts.year+'-'+createdParts.month+'-'+createdParts.day:startDate;
-      const empStart=Math.max(startMs,Date.parse(createdIso+'T00:00:00Z'));
+      const employmentStart=emp.hire_date||createdIso;
+      const employmentEnd=emp.exit_date||'9999-12-31';
+      const empStart=Math.max(startMs,Date.parse(employmentStart+'T00:00:00Z'));
+      const empEnd=Math.min(endMs,Date.parse(employmentEnd+'T00:00:00Z'));
       const approved=leaveByEmployee.get(emp.id)||[];
-      for(let ms=empStart;ms<=endMs;ms+=86400000){
+      for(let ms=empStart;ms<=empEnd;ms+=86400000){
         const d=new Date(ms),weekday=d.getUTCDay()===0?7:d.getUTCDay();
-        if(!workingDays.includes(weekday))continue;
         const iso=d.toISOString().slice(0,10);
+        const calendarDay=calendarByDate.get(iso);
+        const isScheduled=calendarDay?.day_type==='working_exception'||(!calendarDay&&workingDays.includes(weekday));
+        if(!isScheduled||calendarDay?.day_type==='holiday'||calendarDay?.day_type==='non_working_exception')continue;
         const onLeave=approved.some(l=>l.start_date<=iso&&l.end_date>=iso);
         if(onLeave){leaveDays++;continue;}
         expectedDays++;
