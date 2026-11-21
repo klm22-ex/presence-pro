@@ -357,11 +357,12 @@ function navigateTo(id){
   document.querySelectorAll(".page-section").forEach(s=>s.classList.remove("active"));
   target.classList.add("active");
   document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.section===id));
-  const titles={dashboard:"Tableau de bord",employees:"Employés",attendance:"Pointage",biometric:"Biométrie",history:"Historique",reports:"Rapports",leaveRequests:"Congés & absences",kiosk:"Mode Pointage",settings:"Paramètres",agentHome:"Espace agent",agentHistory:"Mon historique"};
+  const titles={dashboard:"Tableau de bord",employees:"Employés",attendance:"Pointage",biometric:"Biométrie",history:"Historique",reports:"Rapports",leaveRequests:"Congés & absences",devices:"Appareils des agents",kiosk:"Mode Pointage",settings:"Paramètres",agentHome:"Espace agent",agentHistory:"Mon historique"};
   document.getElementById("pageTitle").textContent=titles[id]||"PrésencePro";
   document.getElementById("sidebar").classList.remove("open");
   window.scrollTo({top:0,behavior:"smooth"});
 }
+  if(id==='devices')loadOrganizationDevices();
 
 document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click",()=>navigateTo(btn.dataset.section)));
 document.getElementById("mobileMenu").addEventListener("click",()=>document.getElementById("sidebar").classList.toggle("open"));
@@ -1414,6 +1415,64 @@ async function ppLoadDeviceRequests(employeeId,container){
       }catch(e){showToast('Action impossible : '+(e.message||'erreur'));btn.disabled=false;}
     }));
   }catch(e){container.innerHTML='<p class="employee-edit-note">Impossible de charger les demandes : '+escapeHTML(e.message||'erreur')+'</p>';}
+}
+let organizationDevicesRequest=0;
+async function loadOrganizationDevices(){
+ const body=document.getElementById('organizationDevicesTable');if(!body)return;
+ const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+ if(!ppSupabase||!ppSession||!ppOrganizationId){body.innerHTML='<tr><td colspan="6">Connectez-vous avec un compte administrateur.</td></tr>';return;}
+ const requestId=++organizationDevicesRequest;
+ body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px">Chargement du registre…</td></tr>';
+ try{
+  let devices=[],offset=0;
+  while(true){
+   const {data,error}=await ppSupabase.from('employee_devices').select('id,employee_id,device_id,device_label,status,requested_at,reviewed_at,last_seen_at').eq('organization_id',ppOrganizationId).order('requested_at',{ascending:false}).range(offset,offset+499);
+   if(error)throw error;
+   const batch=data||[];devices.push(...batch);
+   if(batch.length<500)break;
+   offset+=500;
+   if(requestId!==organizationDevicesRequest)return;
+  }
+  if(requestId!==organizationDevicesRequest)return;
+  const employeeIds=[...new Set(devices.map(d=>d.employee_id))];let names=new Map();
+  for(let i=0;i<employeeIds.length;i+=500){
+   const {data,error}=await ppSupabase.from('employees').select('id,full_name,code').in('id',employeeIds.slice(i,i+500)).eq('organization_id',ppOrganizationId);
+   if(error)throw error;
+   (data||[]).forEach(e=>names.set(e.id,e));
+  }
+  if(requestId!==organizationDevicesRequest)return;
+  const count=status=>devices.filter(d=>d.status===status).length;
+  set('deviceActiveCount',String(count('active')));
+  set('devicePendingCount',String(count('pending')));
+  set('deviceRevokedCount',String(count('revoked')));
+  set('deviceRegisterCaption',devices.length+' appareil(s) enregistré(s) · '+count('pending')+' demande(s) en attente');
+  const statusLabel={active:'Autorisé',pending:'En attente',rejected:'Refusé',revoked:'Révoqué'};
+  body.innerHTML=devices.map(d=>{
+   const employee=names.get(d.employee_id);
+   const status=d.status||'unknown';
+   const date=d.requested_at?new Date(d.requested_at).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'—';
+   const last=d.last_seen_at?new Date(d.last_seen_at).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'Jamais';
+   const actions=status==='pending'?'<button type="button" class="primary-btn device-global-approve" data-employee-id="'+escapeHTML(d.employee_id)+'" data-device-id="'+escapeHTML(d.device_id)+'">Autoriser</button> <button type="button" class="ghost-btn device-global-reject" data-employee-id="'+escapeHTML(d.employee_id)+'" data-device-id="'+escapeHTML(d.device_id)+'">Refuser</button>':status==='active'?'<span class="device-current-label">Téléphone actuel</span>':'—';
+   return '<tr><td><strong>'+escapeHTML(employee?.full_name||'Employé')+'</strong><small class="device-employee-code">'+escapeHTML(employee?.code||'')+'</small></td><td>'+escapeHTML(d.device_label||'Appareil web')+'</td><td><span class="device-status '+escapeHTML(status)+'">'+escapeHTML(statusLabel[status]||'Inconnu')+'</span></td><td>'+escapeHTML(date)+'</td><td>'+escapeHTML(last)+'</td><td>'+actions+'</td></tr>';
+  }).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px">Aucun appareil enregistré pour le moment.</td></tr>';
+  body.querySelectorAll('.device-global-approve,.device-global-reject').forEach(button=>button.addEventListener('click',async()=>{
+   button.disabled=true;
+   const approve=button.classList.contains('device-global-approve');
+   const employeeId=button.dataset.employeeId,deviceId=button.dataset.deviceId;
+   try{
+    const {error}=await ppSupabase.rpc('admin_review_employee_device',{p_employee_id:employeeId,p_device_id:deviceId,p_approve:approve});
+    if(error)throw error;
+    showToast(approve?'Téléphone autorisé. L’ancien appareil actif a été révoqué.':'Demande de téléphone refusée.');
+    await loadOrganizationDevices();
+    await ppRefreshHRAlerts();
+   }catch(error){showToast('Décision impossible : '+(error.message||'vérifiez vos droits.'));button.disabled=false;}
+  }));
+ }catch(error){
+  console.error('Registre des appareils indisponible:',error);
+  body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px">Impossible de charger les appareils. Vérifiez les droits administrateur.</td></tr>';
+  set('deviceRegisterCaption','Registre temporairement indisponible.');
+  ['deviceActiveCount','devicePendingCount','deviceRevokedCount'].forEach(id=>set(id,'—'));
+ }
 }
 function setKioskFeedback(kind,title,detail){
   const box=document.getElementById('kioskResult');if(!box)return;
