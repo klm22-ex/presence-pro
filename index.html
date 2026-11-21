@@ -123,7 +123,7 @@
             </article>
             <article class="stat-card">
               <div class="stat-icon red">!</div>
-              <div><span>Absents</span><strong id="absentCount">4</strong><small>À vérifier aujourd'hui</small></div>
+              <div><span>Sans arrivée</span><strong id="absentCount">4</strong><small>À confirmer après la fin du service</small></div>
             </article>
           </div>
 
@@ -164,6 +164,16 @@
                 <tbody id="recentTable"></tbody>
               </table>
             </div>
+          </article>
+          <article class="panel dashboard-insights-panel">
+            <div class="panel-head"><div><h2>Vigilance RH · 30 jours</h2><p id="dashboardInsightsCaption">Analyse des pointages enregistrés sur les 30 derniers jours</p></div><button class="ghost-btn" type="button" onclick="navigateTo('reports')">Voir les rapports</button></div>
+            <div class="dashboard-insight-metrics">
+              <div><span>Arrivées enregistrées</span><strong id="dashboardThirtyDayArrivals">—</strong></div>
+              <div><span>Taux de retard</span><strong id="dashboardThirtyDayLateRate">—</strong></div>
+              <div><span>Employés avec 3+ retards</span><strong id="dashboardRepeatedLateCount">—</strong></div>
+            </div>
+            <div class="panel-head dashboard-insight-subhead"><div><h3>Retards récurrents</h3><p>Employés ayant au moins trois arrivées tardives sur la période chargée.</p></div></div>
+            <div class="table-wrap"><table><thead><tr><th>Employé</th><th>Retards</th></tr></thead><tbody id="dashboardLateList"><tr><td colspan="2" class="dashboard-empty">Chargement des indicateurs…</td></tr></tbody></table></div>
           </article>
         </section>
 
@@ -367,6 +377,6 @@
   <script src="js/supabase-config.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="js/app.js?v=20261121-rdc-holidays"></script>
+  <script src="js/app.js?v=20261121-rh-dashboard"></script>
 </body>
 </html>
