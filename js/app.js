@@ -228,24 +228,28 @@ async function ppInit(){
 }
 async function ppRefreshHRAlerts(){
  const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
- if(!ppSupabase||!ppSession||!ppOrganizationId){set('dashboardPendingJustifications','—');set('dashboardPendingLeaves','—');return;}
+ if(!ppSupabase||!ppSession||!ppOrganizationId){['dashboardPendingJustifications','dashboardPendingLeaves','dashboardPendingDevices'].forEach(id=>set(id,'—'));return;}
  try{
-  const [justifications,leaves]=await Promise.all([
+  const [justifications,leaves,devices]=await Promise.all([
    ppSupabase.from('absence_justifications').select('id',{count:'exact',head:true}).eq('organization_id',ppOrganizationId).eq('status','pending'),
-   ppSupabase.from('leave_requests').select('id',{count:'exact',head:true}).eq('organization_id',ppOrganizationId).eq('status','pending')
+   ppSupabase.from('leave_requests').select('id',{count:'exact',head:true}).eq('organization_id',ppOrganizationId).eq('status','pending'),
+   ppSupabase.from('employee_devices').select('id',{count:'exact',head:true}).eq('organization_id',ppOrganizationId).eq('status','pending')
   ]);
   if(justifications.error)throw justifications.error;
   if(leaves.error)throw leaves.error;
+  if(devices.error)throw devices.error;
   set('dashboardPendingJustifications',String(justifications.count||0));
   set('dashboardPendingLeaves',String(leaves.count||0));
-  const total=(justifications.count||0)+(leaves.count||0);
+  set('dashboardPendingDevices',String(devices.count||0));
+  const total=(justifications.count||0)+(leaves.count||0)+(devices.count||0);
   set('dashboardAlertsCaption',total?total+' demande(s) nécessitent votre attention.':'Aucune demande en attente pour le moment.');
  }catch(error){
   console.error('Chargement des alertes RH impossible:',error);
-  set('dashboardPendingJustifications','—');set('dashboardPendingLeaves','—');
+  ['dashboardPendingJustifications','dashboardPendingLeaves','dashboardPendingDevices'].forEach(id=>set(id,'—'));
   set('dashboardAlertsCaption','Alertes indisponibles. Vérifiez les droits et la connexion.');
  }
 }
+
 async function ppBootCloud(){
   try{await ppLoadOrganization();await ppLoadEmployees();await ppLoadOrganizationSettings();await loadLeaveRequests();await loadAbsenceJustifications();await loadCompanyCalendar();await ppRefreshHRAlerts();}
   catch(err){console.error(err);showToast('Connexion Supabase : '+(err.message||'erreur'));}
@@ -1152,12 +1156,14 @@ renderBiometric();updateBiometricDeviceStatus();
       logout.disabled=false;logout.textContent='↪ Se déconnecter';
     }
   });
-  toggle.addEventListener('click',()=>{signup=!signup;title.textContent=signup?'Créer votre espace':'Connexion';submit.textContent=signup?'Créer le compte':'Se connecter';toggle.textContent=signup?'J’ai déjà un compte':'Créer un compte';fields.style.display=signup?'block':'none';});
+  const adminPassword=document.getElementById('authPassword');
+  toggle.addEventListener('click',()=>{signup=!signup;title.textContent=signup?'Créer votre espace':'Connexion';submit.textContent=signup?'Créer le compte':'Se connecter';toggle.textContent=signup?'J’ai déjà un compte':'Créer un compte';fields.style.display=signup?'block':'none';if(adminPassword){adminPassword.minLength=signup?12:6;adminPassword.placeholder=signup?'12 caractères minimum':'Votre mot de passe';}});
   form.addEventListener('submit',async e=>{e.preventDefault();if(!ppHasSupabase()){ppSetAuthStatus('Ajoutez d’abord vos identifiants Supabase dans js/supabase-config.js.');return;}
     const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value,name=document.getElementById('authFullName').value.trim(),org=document.getElementById('authOrgName').value.trim();
     try{
       if(signup){
         if(!name||!org){ppSetAuthStatus('Nom et organisation sont obligatoires.');return;}
+        if(password.length<12){ppSetAuthStatus('Pour protéger votre compte, choisissez un mot de passe d’au moins 12 caractères.');return;}
         localStorage.setItem('pp_pending_org',JSON.stringify({name,org}));
         const {data,error}=await ppSupabase.auth.signUp({email,password});if(error)throw error;
         if(data.session){ppSession=data.session;await ppBootCloud();await enterAdmin(true);}else ppSetAuthStatus('Compte créé. Vérifiez votre email si la confirmation est activée, puis connectez-vous.');
@@ -1187,7 +1193,7 @@ function setEmployeeAccessMode(mode){
   if(nameInput)nameInput.required=creating;
   if(submit)submit.textContent=creating?'Créer mon compte':'Se connecter';
   if(toggle)toggle.textContent=creating?'J’ai déjà un compte ? Se connecter':'Pas encore de compte ? Créer mon compte';
-  if(password)password.autocomplete=creating?'new-password':'current-password';
+  if(password){password.autocomplete=creating?'new-password':'current-password';password.minLength=creating?12:6;password.placeholder=creating?'12 caractères minimum':'Votre mot de passe';}
   const status=document.getElementById('employeeAccessStatus');
   if(status)status.textContent='';
 }
@@ -1223,7 +1229,7 @@ function initEmployeePasswordRecovery(){
     const confirmPassword=document.getElementById('employeeConfirmPassword').value;
     const status=document.getElementById('employeePasswordRecoveryStatus');
     const button=document.getElementById('employeePasswordRecoverySubmit');
-    if(password.length<8){status.textContent='Le mot de passe doit contenir au moins 8 caractères.';return;}
+    if(password.length<12){status.textContent='Le mot de passe doit contenir au moins 12 caractères.';return;}
     if(password!==confirmPassword){status.textContent='Les deux mots de passe ne correspondent pas.';return;}
     button.disabled=true;button.textContent='Enregistrement…';
     try{
@@ -1254,6 +1260,7 @@ async function employeeLoginFromApp(){
   const code=document.getElementById('employeeAccessCode').value.trim().toUpperCase();
   const status=document.getElementById('employeeAccessStatus');
   if(!email||!password||!code){status.textContent='E-mail, mot de passe et matricule sont obligatoires.';return;}
+  if(password.length<12){status.textContent='Pour protéger votre compte, choisissez un mot de passe d’au moins 12 caractères.';return;}
   if(!ppHasSupabase()){status.textContent='Supabase n’est pas configuré.';return;}
   try{
     const {data,error}=await ppSupabase.auth.signInWithPassword({email,password});
