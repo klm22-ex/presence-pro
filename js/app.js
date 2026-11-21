@@ -361,8 +361,9 @@ function navigateTo(id){
   document.getElementById("pageTitle").textContent=titles[id]||"PrésencePro";
   document.getElementById("sidebar").classList.remove("open");
   window.scrollTo({top:0,behavior:"smooth"});
-}
   if(id==='devices')loadOrganizationDevices();
+  if(id==='security')loadSecurityEvents();
+}
 
 document.querySelectorAll(".nav-item").forEach(btn=>btn.addEventListener("click",()=>navigateTo(btn.dataset.section)));
 document.getElementById("mobileMenu").addEventListener("click",()=>document.getElementById("sidebar").classList.toggle("open"));
@@ -1474,6 +1475,53 @@ async function loadOrganizationDevices(){
   ['deviceActiveCount','devicePendingCount','deviceRevokedCount'].forEach(id=>set(id,'—'));
  }
 }
+let securityEventsRequest=0;
+async function loadSecurityEvents(){
+ const body=document.getElementById('securityEventsTable');if(!body)return;
+ const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+ if(!ppSupabase||!ppSession||!ppOrganizationId||!['owner','admin','manager'].includes(ppUserRole)){
+  body.innerHTML='<tr><td colspan="5">Accès réservé aux responsables de l’organisation.</td></tr>';return;
+ }
+ const requestId=++securityEventsRequest;
+ body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px">Chargement du journal…</td></tr>';
+ try{
+  const {data,error}=await ppSupabase.from('security_events')
+   .select('id,employee_id,event_type,severity,message,metadata,created_at')
+   .eq('organization_id',ppOrganizationId).order('created_at',{ascending:false}).range(0,99);
+  if(error)throw error;
+  if(requestId!==securityEventsRequest)return;
+  const ids=[...new Set((data||[]).map(e=>e.employee_id).filter(Boolean))];
+  let names=new Map();
+  if(ids.length){
+   const {data:emps,error:empError}=await ppSupabase.from('employees')
+    .select('id,full_name,code').eq('organization_id',ppOrganizationId).in('id',ids);
+   if(empError)throw empError;
+   (emps||[]).forEach(e=>names.set(e.id,e));
+  }
+  if(requestId!==securityEventsRequest)return;
+  const labels={
+   attendance_arrival:'Arrivée enregistrée',attendance_departure:'Départ enregistré',
+   repeat_scan_blocked:'Pointage supplémentaire bloqué',invalid_qr_scan:'QR invalide ou expiré',
+   unauthorized_device_scan:'Appareil non autorisé',device_approved:'Téléphone autorisé',
+   device_rejected:'Changement de téléphone refusé'
+  };
+  const severity={info:'Information',warning:'À surveiller',high:'Critique'};
+  set('securityEventsCaption',(data||[]).length+' événement(s) récent(s) · 100 maximum affichés');
+  set('securityHighCount',String((data||[]).filter(e=>e.severity==='high').length));
+  set('securityWarningCount',String((data||[]).filter(e=>e.severity==='warning').length));
+  set('securityInfoCount',String((data||[]).filter(e=>e.severity==='info').length));
+  body.innerHTML=(data||[]).map(e=>{
+   const emp=names.get(e.employee_id);
+   const when=e.created_at?new Date(e.created_at).toLocaleString('fr-FR',{timeZone:'Africa/Kinshasa',dateStyle:'short',timeStyle:'short'}):'—';
+   const sev=e.severity||'info';
+   return '<tr><td>'+escapeHTML(when)+'</td><td><strong>'+escapeHTML(emp?.full_name||'—')+'</strong><small class="device-employee-code">'+escapeHTML(emp?.code||'')+'</small></td><td>'+escapeHTML(labels[e.event_type]||e.event_type)+'</td><td><span class="security-severity '+escapeHTML(sev)+'">'+escapeHTML(severity[sev]||sev)+'</span></td><td>'+escapeHTML(e.message||'—')+'</td></tr>';
+  }).join('')||'<tr><td colspan="5" style="text-align:center;padding:24px">Aucun événement de sécurité enregistré.</td></tr>';
+ }catch(error){
+  console.error('Journal de sécurité indisponible:',error);
+  body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px">Impossible de charger le journal. Vérifiez les droits du compte et la migration SQL.</td></tr>';
+  set('securityEventsCaption','Journal temporairement indisponible.');
+ }
+}
 function setKioskFeedback(kind,title,detail){
   const box=document.getElementById('kioskResult');if(!box)return;
   box.className='kiosk-result '+kind;
@@ -1518,6 +1566,13 @@ async function handleCompanyQr(text){
     const expired=msg.includes('token')||msg.includes('qr')||msg.includes('expired')||msg.includes('expire');
     setKioskFeedback('error',expired?'QR expiré ou invalide':'Pointage non enregistré',expired?'Demandez le QR quotidien actuel à votre administrateur.':'Vérifiez votre connexion puis réessayez.');
     showToast(recordError.message||'Pointage impossible.');return;
+  }
+  if(result?.action==='blocked'){
+    const detail=result.message||'Cette tentative a été bloquée et enregistrée dans le journal de sécurité.';
+    setKioskFeedback('error','Pointage bloqué',detail);
+    const retry=document.getElementById('startQrBtn');if(retry){retry.disabled=false;retry.textContent='Scanner à nouveau';}
+    showToast(detail);
+    return;
   }
   const action=result?.action==='arrival'?'Arrivée':'Départ';
   const timestamp=action==='Arrivée'?result?.arrival_at:result?.departure_at;
