@@ -57,7 +57,7 @@ async function renderDashboardInsights(){
    const startDate=new Date(endMs-29*86400000).toISOString().slice(0,10);
    let rows=[],offset=0;
    while(true){
-    const {data,error}=await ppSupabase.from('attendance').select('attendance_date,arrival_at,employees!attendance_employee_id_fkey(full_name)').eq('organization_id',ppOrganizationId).gte('attendance_date',startDate).lte('attendance_date',today).order('attendance_date',{ascending:false}).range(offset,offset+499);
+    const {data,error}=await ppSupabase.from('attendance').select('employee_id,attendance_date,arrival_at,employees!attendance_employee_id_fkey(full_name)').eq('organization_id',ppOrganizationId).gte('attendance_date',startDate).lte('attendance_date',today).order('attendance_date',{ascending:false}).range(offset,offset+499);
     if(error)throw error;
     const batch=data||[];rows.push(...batch);
     if(batch.length<500)break;
@@ -69,15 +69,17 @@ async function renderDashboardInsights(){
    const lateRows=arrivals.filter(r=>ppAttendanceStatus(r.arrival_at)==='late');
    const lateByEmployee=new Map();
    for(const row of lateRows){
-    const name=row.employees?.full_name||'Employé';
-    lateByEmployee.set(name,(lateByEmployee.get(name)||0)+1);
+    const key=row.employee_id||row.employees?.full_name||'unknown';
+    const current=lateByEmployee.get(key)||{name:row.employees?.full_name||'Employé',count:0};
+    current.count++;
+    lateByEmployee.set(key,current);
    }
-   const repeated=[...lateByEmployee.entries()].filter(([,count])=>count>=3).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'fr')).slice(0,5);
+   const repeated=[...lateByEmployee.values()].filter(item=>item.count>=3).sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,'fr')).slice(0,5);
    const rate=arrivals.length?Math.round(lateRows.length/arrivals.length*100):0;
    set('dashboardThirtyDayArrivals',String(arrivals.length));
    set('dashboardThirtyDayLateRate',arrivals.length?rate+'%':'—');
-   set('dashboardRepeatedLateCount',String([...lateByEmployee.values()].filter(count=>count>=3).length));
-   if(list)list.innerHTML=repeated.map(([name,count])=>'<tr><td>'+escapeHTML(name)+'</td><td><span class="dashboard-late-pill">'+count+' retards</span></td></tr>').join('')||'<tr><td colspan="2" class="dashboard-empty">Aucun retard récurrent détecté sur les 30 derniers jours.</td></tr>';
+   set('dashboardRepeatedLateCount',String([...lateByEmployee.values()].filter(item=>item.count>=3).length));
+   if(list)list.innerHTML=repeated.map(item=>'<tr><td>'+escapeHTML(item.name)+'</td><td><span class="dashboard-late-pill">'+item.count+' retards</span></td></tr>').join('')||'<tr><td colspan="2" class="dashboard-empty">Aucun retard récurrent détecté sur les 30 derniers jours.</td></tr>';
    if(caption)caption.textContent='Analyse du '+ppDateLabel(startDate)+' au '+ppDateLabel(today)+' · '+arrivals.length+' arrivées enregistrées';
   }catch(error){
    if(requestId!==dashboardInsightsRequest)return;
