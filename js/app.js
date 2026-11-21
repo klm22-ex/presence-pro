@@ -457,18 +457,50 @@ async function loadReportPageFromServer(){
   }catch(error){if(requestId!==reportRequestId)return;console.error('Chargement du rapport impossible:',error);body.innerHTML='<tr><td colspan="5" style="text-align:center;padding:24px;color:#b45309">Impossible de charger le rapport. Réessayez.</td></tr>';const count=document.getElementById('reportRecordCount');if(count)count.textContent='—';}
 }
 
+
+function ppNationalHolidaysForYear(year){
+ const fixed=[[1,1,'Nouvel An'],[1,4,'Journée des Martyrs de l’indépendance'],[1,16,'Journée du héros national Laurent-Désiré Kabila'],[1,17,'Journée du héros national Patrice Emery Lumumba'],[4,6,'Journée du combat de Simon Kimbangu et de la conscience africaine'],[5,1,'Fête du travail'],[5,17,'Journée des Forces armées'],[6,30,'Journée de l’indépendance'],[8,1,'Fête des parents'],[12,25,'Noël']];
+ const grouped=new Map();
+ for(const [month,day,name] of fixed){
+  const legalDate=new Date(Date.UTC(year,month-1,day)),observed=new Date(legalDate),moved=legalDate.getUTCDay()===0;
+  if(moved)observed.setUTCDate(observed.getUTCDate()-1);
+  const iso=observed.toISOString().slice(0,10);
+  const label=moved?name+' (congé observé la veille du '+String(day).padStart(2,'0')+'/'+String(month).padStart(2,'0')+')':name;
+  grouped.set(iso,[...(grouped.get(iso)||[]),label]);
+ }
+ return [...grouped.entries()].map(([calendar_date,names])=>({calendar_date,label:names.join(' ; '),day_type:'holiday',source:'national_law'})).sort((a,b)=>a.calendar_date.localeCompare(b.calendar_date));
+}
+async function importRdcNationalHolidays(){
+ if(!ppSupabase||!ppSession||!ppOrganizationId){showToast('Connectez-vous comme administrateur.');return;}
+ const year=Number(document.getElementById('calendarYear')?.value);
+ if(!Number.isInteger(year)||year<2023||year>2100){showToast('Choisissez une année comprise entre 2023 et 2100.');return;}
+ const button=document.getElementById('importNationalHolidaysButton');if(button){button.disabled=true;button.textContent='Importation…';}
+ try{
+  const holidays=ppNationalHolidaysForYear(year);
+  const {data:existing,error:readError}=await ppSupabase.from('company_calendar_days').select('calendar_date').eq('organization_id',ppOrganizationId).gte('calendar_date',year+'-01-01').lte('calendar_date',year+'-12-31');
+  if(readError)throw readError;
+  const existingDates=new Set((existing||[]).map(row=>row.calendar_date));
+  const toInsert=holidays.filter(day=>!existingDates.has(day.calendar_date)).map(day=>({...day,organization_id:ppOrganizationId,created_by:ppSession.user.id}));
+  const skipped=holidays.length-toInsert.length;
+  if(toInsert.length){const {error}=await ppSupabase.from('company_calendar_days').upsert(toInsert,{onConflict:'organization_id,calendar_date',ignoreDuplicates:true});if(error)throw error;}
+  await loadCompanyCalendar();await loadReportSummaryFromServer(reportRequestId);
+  showToast(toInsert.length+' date(s) légale(s) importée(s) pour '+year+'. '+skipped+' date(s) déjà présentes conservées.');
+ }catch(error){console.error(error);showToast('Importation impossible : '+(error.message||'vérifiez les permissions.'));}
+ finally{if(button){button.disabled=false;button.textContent='Importer les jours légaux';}}
+}
+
 async function loadCompanyCalendar(){
  const body=document.getElementById('companyCalendarTable');if(!body)return;
  if(!ppSupabase||!ppSession||!ppOrganizationId){body.innerHTML='<tr><td colspan="4">Connectez-vous comme responsable.</td></tr>';return;}
- try{const {data,error}=await ppSupabase.from('company_calendar_days').select('id,calendar_date,label,day_type').eq('organization_id',ppOrganizationId).order('calendar_date',{ascending:true}).limit(300);if(error)throw error;
- body.innerHTML=(data||[]).map(d=>'<tr><td>'+escapeHTML(ppDateLabel(d.calendar_date))+'</td><td>'+escapeHTML(d.label)+'</td><td>'+escapeHTML(d.day_type==='holiday'?'Jour férié':d.day_type==='working_exception'?'Jour travaillé exceptionnel':'Jour non travaillé')+'</td><td><button class="ghost-btn" type="button" onclick="deleteCompanyCalendarDay(\''+d.id+'\')">Supprimer</button></td></tr>').join('')||'<tr><td colspan="4">Aucun jour particulier.</td></tr>';
+ try{const {data,error}=await ppSupabase.from('company_calendar_days').select('id,calendar_date,label,day_type,source').eq('organization_id',ppOrganizationId).order('calendar_date',{ascending:true}).limit(300);if(error)throw error;
+ body.innerHTML=(data||[]).map(d=>'<tr><td>'+escapeHTML(ppDateLabel(d.calendar_date))+'</td><td>'+escapeHTML(d.label)+'</td><td>'+escapeHTML(d.day_type==='holiday'?'Jour férié':d.day_type==='working_exception'?'Jour travaillé exceptionnel':'Jour non travaillé')+'</td><td>'+escapeHTML(d.source==='national_law'?'Jours légaux RDC':'Entreprise')+'</td><td><button class="ghost-btn" type="button" onclick="deleteCompanyCalendarDay(\''+d.id+'\')">Supprimer</button></td></tr>').join('')||'<tr><td colspan="5">Aucun jour particulier.</td></tr>';
  }catch(e){console.error(e);body.innerHTML='<tr><td colspan="4">Calendrier indisponible. Vérifiez les permissions.</td></tr>';}
 }
 document.getElementById('companyCalendarForm')?.addEventListener('submit',async e=>{
  e.preventDefault();if(!ppSupabase||!ppSession||!ppOrganizationId){showToast('Connectez-vous comme administrateur.');return;}
  const calendar_date=document.getElementById('calendarDate').value,label=document.getElementById('calendarLabel').value.trim(),day_type=document.getElementById('calendarType').value;
  if(!calendar_date||label.length<2){showToast('Indiquez une date et un libellé valide.');return;}
- try{const {error}=await ppSupabase.from('company_calendar_days').upsert({organization_id:ppOrganizationId,calendar_date,label,day_type,created_by:ppSession.user.id},{onConflict:'organization_id,calendar_date'});if(error)throw error;e.target.reset();await loadCompanyCalendar();await loadReportSummaryFromServer(reportRequestId);showToast('Jour ajouté au calendrier.');}
+ try{const {error}=await ppSupabase.from('company_calendar_days').upsert({organization_id:ppOrganizationId,calendar_date,label,day_type,source:'company',created_by:ppSession.user.id},{onConflict:'organization_id,calendar_date'});if(error)throw error;e.target.reset();await loadCompanyCalendar();await loadReportSummaryFromServer(reportRequestId);showToast('Jour ajouté au calendrier.');}
  catch(err){console.error(err);showToast('Enregistrement impossible : '+(err.message||'permissions insuffisantes.'));}
 });
 async function deleteCompanyCalendarDay(id){
