@@ -1260,7 +1260,6 @@ async function employeeLoginFromApp(){
   const code=document.getElementById('employeeAccessCode').value.trim().toUpperCase();
   const status=document.getElementById('employeeAccessStatus');
   if(!email||!password||!code){status.textContent='E-mail, mot de passe et matricule sont obligatoires.';return;}
-  if(password.length<12){status.textContent='Pour protéger votre compte, choisissez un mot de passe d’au moins 12 caractères.';return;}
   if(!ppHasSupabase()){status.textContent='Supabase n’est pas configuré.';return;}
   try{
     const {data,error}=await ppSupabase.auth.signInWithPassword({email,password});
@@ -1286,6 +1285,7 @@ async function employeeCreateFromApp(){
   const code=document.getElementById('employeeAccessCode').value.trim().toUpperCase();
   const status=document.getElementById('employeeAccessStatus');
   if(!email||!password||!code){status.textContent='E-mail, mot de passe et matricule sont obligatoires.';return;}
+  if(password.length<12){status.textContent='Pour protéger votre compte, choisissez un mot de passe d’au moins 12 caractères.';return;}
   if(!ppHasSupabase()){status.textContent='Supabase n’est pas configuré.';return;}
   try{
     const {data,error}=await ppSupabase.auth.signUp({email,password,options:{data:{full_name:name||null,role:'employee'}}});
