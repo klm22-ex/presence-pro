@@ -247,7 +247,7 @@ async function ppRefreshHRAlerts(){
  }
 }
 async function ppBootCloud(){
-  try{await ppLoadOrganization();await ppLoadEmployees();await ppLoadOrganizationSettings();await loadLeaveRequests();await loadAbsenceJustifications();await ppRefreshHRAlerts();await loadCompanyCalendar();await ppRefreshHRAlerts();}
+  try{await ppLoadOrganization();await ppLoadEmployees();await ppLoadOrganizationSettings();await loadLeaveRequests();await loadAbsenceJustifications();await loadCompanyCalendar();await ppRefreshHRAlerts();}
   catch(err){console.error(err);showToast('Connexion Supabase : '+(err.message||'erreur'));}
 }
 const employees = [
@@ -965,7 +965,7 @@ async function loadLeaveRequests(){
     body.innerHTML=(data||[]).map(r=>`<tr><td>${escapeHTML(names[r.employee_id]||'Employé')}</td><td>${escapeHTML(r.request_type)}</td><td>${escapeHTML(r.start_date)} → ${escapeHTML(r.end_date)}</td><td>${escapeHTML(r.reason)}</td><td><span class="leave-status ${escapeHTML(r.status)}">${r.status==='pending'?'En attente':r.status==='approved'?'Approuvée':'Refusée'}</span></td><td>${r.status==='pending'?`<button class="ghost-btn" onclick="decideLeaveRequest('${r.id}','approved')">Approuver</button> <button class="ghost-btn" onclick="decideLeaveRequest('${r.id}','rejected')">Refuser</button>`:'—'}</td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px">Aucune demande.</td></tr>';
   }catch(err){body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px">Impossible de charger les demandes. Vérifiez que la migration SQL V15 a été exécutée.</td></tr>';}
 }
-async function decideLeaveRequest(id,status){if(!ppSupabase||!ppSession)return;try{const {error}=await ppSupabase.from('leave_requests').update({status,reviewed_by:ppSession.user.id,reviewed_at:new Date().toISOString()}).eq('id',id).eq('status','pending');if(error)throw error;showToast(status==='approved'?'Demande approuvée.':'Demande refusée.');await loadLeaveRequests();renderReports();}catch(err){showToast('Décision impossible : vérifiez les permissions de votre compte.');}}
+async function decideLeaveRequest(id,status){if(!ppSupabase||!ppSession)return;try{const {error}=await ppSupabase.from('leave_requests').update({status,reviewed_by:ppSession.user.id,reviewed_at:new Date().toISOString()}).eq('id',id).eq('status','pending');if(error)throw error;showToast(status==='approved'?'Demande approuvée.':'Demande refusée.');await loadLeaveRequests();await ppRefreshHRAlerts();renderReports();}catch(err){showToast('Décision impossible : vérifiez les permissions de votre compte.');}}
 document.getElementById('leaveRequestForm')?.addEventListener('submit',submitLeaveRequest);
 
 async function ppLoadOrganizationSettings(){
