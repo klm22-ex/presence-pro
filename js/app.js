@@ -62,13 +62,14 @@ function renderDashboardInsights(){
 
 function ppRefreshDashboard(){
   const total=employees.filter(e=>e.active!==false).length;
-  const present=employees.filter(e=>e.active!==false&&e.status!=='absent').length;
+  const onTime=employees.filter(e=>e.active!==false&&e.status==='present').length;
   const late=employees.filter(e=>e.active!==false&&e.status==='late').length;
-  const absent=Math.max(0,total-present);
-  const pct=total?Math.round(present/total*100):0;
-  [['totalEmployees',total],['presentCount',present],['lateCount',late],['absentCount',absent]].forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.textContent=val;});
+  const arrived=onTime+late;
+  const absent=Math.max(0,total-arrived);
+  const pct=total?Math.round(arrived/total*100):0;
+  [['totalEmployees',total],['presentCount',arrived],['lateCount',late],['absentCount',absent]].forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.textContent=val;});
   const ring=document.querySelector('#progressRing strong');if(ring)ring.textContent=pct+'%';
-  const legends=document.querySelectorAll('.progress-wrap .legend>div strong');if(legends.length===3){legends[0].textContent=present;legends[1].textContent=late;legends[2].textContent=absent;}
+  const legends=document.querySelectorAll('.progress-wrap .legend>div strong');if(legends.length===3){legends[0].textContent=onTime;legends[1].textContent=late;legends[2].textContent=absent;}
   const positive=document.querySelector('#presentCount')?.parentElement?.querySelector('small');if(positive)positive.textContent=`${pct}% de l’effectif`;
   const ringEl=document.getElementById('progressRing');if(ringEl)ringEl.style.setProperty('--progress',pct+'%');
   renderDashboardInsights();
