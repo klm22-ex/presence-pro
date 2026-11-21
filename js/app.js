@@ -226,8 +226,28 @@ async function ppInit(){
   if(!ppSession){return;}
   await ppBootCloud();
 }
+async function ppRefreshHRAlerts(){
+ const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+ if(!ppSupabase||!ppSession||!ppOrganizationId){set('dashboardPendingJustifications','—');set('dashboardPendingLeaves','—');return;}
+ try{
+  const [justifications,leaves]=await Promise.all([
+   ppSupabase.from('absence_justifications').select('id',{count:'exact',head:true}).eq('organization_id',ppOrganizationId).eq('status','pending'),
+   ppSupabase.from('leave_requests').select('id',{count:'exact',head:true}).eq('organization_id',ppOrganizationId).eq('status','pending')
+  ]);
+  if(justifications.error)throw justifications.error;
+  if(leaves.error)throw leaves.error;
+  set('dashboardPendingJustifications',String(justifications.count||0));
+  set('dashboardPendingLeaves',String(leaves.count||0));
+  const total=(justifications.count||0)+(leaves.count||0);
+  set('dashboardAlertsCaption',total?total+' demande(s) nécessitent votre attention.':'Aucune demande en attente pour le moment.');
+ }catch(error){
+  console.error('Chargement des alertes RH impossible:',error);
+  set('dashboardPendingJustifications','—');set('dashboardPendingLeaves','—');
+  set('dashboardAlertsCaption','Alertes indisponibles. Vérifiez les droits et la connexion.');
+ }
+}
 async function ppBootCloud(){
-  try{await ppLoadOrganization();await ppLoadEmployees();await ppLoadOrganizationSettings();await loadLeaveRequests();await loadAbsenceJustifications();await loadCompanyCalendar();}
+  try{await ppLoadOrganization();await ppLoadEmployees();await ppLoadOrganizationSettings();await loadLeaveRequests();await loadAbsenceJustifications();await ppRefreshHRAlerts();await loadCompanyCalendar();await ppRefreshHRAlerts();}
   catch(err){console.error(err);showToast('Connexion Supabase : '+(err.message||'erreur'));}
 }
 const employees = [
@@ -932,7 +952,7 @@ async function decideAbsenceJustification(id,status){
     const {error}=await ppSupabase.from('absence_justifications').update({status,reviewed_by:ppSession.user.id,reviewed_at:new Date().toISOString()}).eq('id',id).eq('status','pending');
     if(error)throw error;
     showToast(status==='approved'?'Justification acceptée.':'Justification refusée.');
-    await loadAbsenceJustifications();await loadReportSummaryFromServer(reportRequestId);
+    await loadAbsenceJustifications();await loadReportSummaryFromServer(reportRequestId);await ppRefreshHRAlerts();
   }catch(err){showToast('Décision impossible : vérifiez vos permissions.');console.error(err);}
 }
 document.getElementById('absenceJustificationForm')?.addEventListener('submit',submitAbsenceJustification);
