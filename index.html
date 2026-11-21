@@ -48,6 +48,7 @@
         <button class="nav-item" data-section="history"><span>▤</span> Historique</button>
         <button class="nav-item" data-section="reports"><span>▥</span> Rapports</button>
         <button class="nav-item" data-section="leaveRequests"><span>▦</span> Congés & absences</button>
+        <button class="nav-item" data-section="devices"><span>▣</span> Appareils des agents</button>
 
         <p class="nav-label">ADMINISTRATION</p>
         <button class="nav-item" data-section="settings"><span>⚙</span> Paramètres</button>
@@ -258,6 +259,20 @@
           <article class="panel"><div class="table-wrap"><table><thead><tr><th>Employé</th><th>Type</th><th>Période</th><th>Motif</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="leaveRequestsTable"><tr><td colspan="6" style="text-align:center;padding:24px">Connectez Supabase et actualisez les demandes.</td></tr></tbody></table></div></article>
           <article class="panel" style="margin-top:18px"><div class="panel-head"><div><h2>Justifications d’absence</h2><p>Acceptez ou refusez les motifs transmis après une absence.</p></div><button class="ghost-btn" type="button" onclick="loadAbsenceJustifications()">Actualiser</button></div><div class="table-wrap"><table><thead><tr><th>Employé</th><th>Date absente</th><th>Motif</th><th>Pièce jointe</th><th>Statut</th><th>Envoyée le</th><th>Décision</th></tr></thead><tbody id="absenceJustificationsTable"><tr><td colspan="6">Aucune donnée chargée.</td></tr></tbody></table></div></article>
           <p class="security-note">Les demandes de congé ne modifient pas automatiquement le statut de présence. La validation reste une décision du responsable.</p>
+        </section>
+
+        <section class="page-section" id="devices">
+          <div class="section-heading"><div><p class="eyebrow">SÉCURITÉ DES COMPTES</p><h1>Appareils des agents</h1><p>Consultez les téléphones associés et validez les changements d’appareil.</p></div><button class="ghost-btn" type="button" onclick="loadOrganizationDevices()">↻ Actualiser</button></div>
+          <div class="device-summary-grid">
+            <article class="device-summary-card"><span>Appareils autorisés</span><strong id="deviceActiveCount">—</strong></article>
+            <article class="device-summary-card"><span>Demandes à valider</span><strong id="devicePendingCount">—</strong></article>
+            <article class="device-summary-card"><span>Appareils révoqués</span><strong id="deviceRevokedCount">—</strong></article>
+          </div>
+          <article class="panel">
+            <div class="panel-head"><div><h2>Registre des appareils</h2><p id="deviceRegisterCaption">État des téléphones enregistrés pour les agents de votre organisation.</p></div></div>
+            <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Appareil</th><th>État</th><th>Demande</th><th>Dernière activité</th><th>Action</th></tr></thead><tbody id="organizationDevicesTable"><tr><td colspan="6" style="text-align:center;padding:24px">Chargement du registre…</td></tr></tbody></table></div>
+          </article>
+          <article class="panel device-security-note"><strong>Règle de sécurité</strong><p>Un seul téléphone peut être actif par agent. Lorsqu’un nouveau téléphone est approuvé, l’ancien appareil actif est automatiquement révoqué. Le navigateur peut toutefois réinitialiser son identifiant local : ce mécanisme limite les changements non autorisés sans constituer une empreinte matérielle inviolable.</p></article>
         </section>
 
         <section class="page-section" id="settings">
