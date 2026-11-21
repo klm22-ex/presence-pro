@@ -357,7 +357,7 @@ function navigateTo(id){
   document.querySelectorAll(".page-section").forEach(s=>s.classList.remove("active"));
   target.classList.add("active");
   document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.section===id));
-  const titles={dashboard:"Tableau de bord",employees:"Employés",attendance:"Pointage",biometric:"Biométrie",history:"Historique",reports:"Rapports",leaveRequests:"Congés & absences",devices:"Appareils des agents",kiosk:"Mode Pointage",settings:"Paramètres",agentHome:"Espace agent",agentHistory:"Mon historique"};
+  const titles={dashboard:"Tableau de bord",employees:"Employés",attendance:"Pointage",biometric:"Biométrie",history:"Historique",reports:"Rapports",leaveRequests:"Congés & absences",devices:"Appareils des agents",security:"Journal de sécurité",kiosk:"Mode Pointage",settings:"Paramètres",agentHome:"Espace agent",agentHistory:"Mon historique"};
   document.getElementById("pageTitle").textContent=titles[id]||"PrésencePro";
   document.getElementById("sidebar").classList.remove("open");
   window.scrollTo({top:0,behavior:"smooth"});
