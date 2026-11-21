@@ -165,6 +165,13 @@
               </table>
             </div>
           </article>
+          <article class="panel dashboard-alerts-panel">
+            <div class="panel-head"><div><h2>Alertes à traiter</h2><p id="dashboardAlertsCaption">Demandes nécessitant une vérification administrative</p></div><button class="ghost-btn" type="button" onclick="navigateTo('leaveRequests')">Ouvrir le suivi →</button></div>
+            <div class="dashboard-alert-grid">
+              <button class="dashboard-alert-item" type="button" onclick="navigateTo('leaveRequests')"><span class="dashboard-alert-number" id="dashboardPendingJustifications">—</span><span><strong>Justifications en attente</strong><small>Absences signalées par les agents</small></span><span aria-hidden="true">→</span></button>
+              <button class="dashboard-alert-item" type="button" onclick="navigateTo('leaveRequests')"><span class="dashboard-alert-number" id="dashboardPendingLeaves">—</span><span><strong>Demandes de congé en attente</strong><small>Demandes à examiner</small></span><span aria-hidden="true">→</span></button>
+            </div>
+          </article>
           <article class="panel dashboard-insights-panel">
             <div class="panel-head"><div><h2>Vigilance RH · 30 jours</h2><p id="dashboardInsightsCaption">Analyse des pointages enregistrés sur les 30 derniers jours</p></div><button class="ghost-btn" type="button" onclick="navigateTo('reports')">Voir les rapports</button></div>
             <div class="dashboard-insight-metrics">
