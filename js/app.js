@@ -42,6 +42,24 @@ function ppDateLabel(value){return value?new Date(value+'T00:00:00').toLocaleDat
 function ppMinutes(value){if(!value||!/^\d{2}:\d{2}$/.test(value))return null;const [h,m]=value.split(':').map(Number);return h*60+m;}
 function ppGetSettings(){try{return JSON.parse(localStorage.getItem('presencepro_settings_v1')||'{}')}catch{return {};}}
 function ppAttendanceStatus(arrival){if(!arrival)return 'absent';const cfg=ppGetSettings(),cutoff=ppMinutes(cfg.startTime||'08:00');const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Kinshasa',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(arrival)).map(p=>[p.type,p.value]));const mins=Number(parts.hour)*60+Number(parts.minute);return mins>(cutoff??480)+15?'late':'present';}
+
+function renderDashboardInsights(){
+ const arrivals=history.filter(r=>r[2]&&r[2]!=='—');
+ const lateRows=arrivals.filter(r=>r[4]==='late');
+ const lateByEmployee=new Map();
+ lateRows.forEach(r=>lateByEmployee.set(r[1],(lateByEmployee.get(r[1])||0)+1));
+ const repeated=[...lateByEmployee.entries()].filter(([,count])=>count>=3).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ const rate=arrivals.length?Math.round(lateRows.length/arrivals.length*100):0;
+ const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+ set('dashboardThirtyDayArrivals',String(arrivals.length));
+ set('dashboardThirtyDayLateRate',arrivals.length?rate+'%':'—');
+ set('dashboardRepeatedLateCount',String([...lateByEmployee.values()].filter(count=>count>=3).length));
+ const list=document.getElementById('dashboardLateList');
+ if(list)list.innerHTML=repeated.map(([name,count])=>'<tr><td>'+escapeHTML(name)+'</td><td><span class="dashboard-late-pill">'+count+' retards</span></td></tr>').join('')||'<tr><td colspan="2" class="dashboard-empty">Aucun retard récurrent détecté sur les pointages chargés.</td></tr>';
+ const caption=document.getElementById('dashboardInsightsCaption');
+ if(caption)caption.textContent='Analyse des 30 derniers jours · '+arrivals.length+' arrivées enregistrées';
+}
+
 function ppRefreshDashboard(){
   const total=employees.filter(e=>e.active!==false).length;
   const present=employees.filter(e=>e.active!==false&&e.status!=='absent').length;
@@ -53,6 +71,7 @@ function ppRefreshDashboard(){
   const legends=document.querySelectorAll('.progress-wrap .legend>div strong');if(legends.length===3){legends[0].textContent=present;legends[1].textContent=late;legends[2].textContent=absent;}
   const positive=document.querySelector('#presentCount')?.parentElement?.querySelector('small');if(positive)positive.textContent=`${pct}% de l’effectif`;
   const ringEl=document.getElementById('progressRing');if(ringEl)ringEl.style.setProperty('--progress',pct+'%');
+  renderDashboardInsights();
   renderReports();
 }
 async function ppLoadEmployees(){
@@ -60,8 +79,8 @@ async function ppLoadEmployees(){
   const today=ppLocalDateISO();
   const since=new Date();since.setDate(since.getDate()-30);const sinceISO=ppLocalDateISO(since);
   const [{data:emps,error:e1},{data:att,error:e2}]=await Promise.all([
-    ppSupabase.from('employees').select('*').order('created_at',{ascending:true}),
-    ppSupabase.from('attendance').select('*').gte('attendance_date',sinceISO).lte('attendance_date',today).order('attendance_date',{ascending:false})
+    ppSupabase.from('employees').select('*').eq('organization_id',ppOrganizationId).order('created_at',{ascending:true}),
+    ppSupabase.from('attendance').select('*').eq('organization_id',ppOrganizationId).gte('attendance_date',sinceISO).lte('attendance_date',today).order('attendance_date',{ascending:false}).order('created_at',{ascending:false})
   ]);
   if(e1)throw e1;if(e2)throw e2;
   const employeeRows=emps||[],attendanceRows=att||[];
@@ -293,7 +312,9 @@ function personHTML(name,code,initials,photo=""){
 function statusHTML(status){return `<span class="status ${status}">${labels[status]}</span>`;}
 
 function renderRecent(){
-  document.getElementById("recentTable").innerHTML=employees.slice(0,5).map(e=>`<tr><td>${personHTML(e.name,e.code,e.initials,e.photo)}</td><td>${e.time}</td><td>${e.status==="present"?"16:0"+(e.id%7):"—"}</td><td>${statusHTML(e.status)}</td></tr>`).join("");
+  const body=document.getElementById("recentTable");if(!body)return;
+  const rows=history.slice(0,5);
+  body.innerHTML=rows.map(r=>{const emp=employees.find(e=>e.name===r[1]);const person=emp?personHTML(emp.name,emp.code,emp.initials,emp.photo):'<div class="person-details"><strong>'+escapeHTML(r[1])+'</strong></div>';return '<tr><td>'+person+'<small class="recent-date">'+escapeHTML(r[0])+'</small></td><td>'+escapeHTML(r[2]||'—')+'</td><td>'+escapeHTML(r[3]||'—')+'</td><td>'+statusHTML(r[4]==='absent'?'absent':r[4]==='late'?'late':'present')+'</td></tr>';}).join('')||'<tr><td colspan="4" class="dashboard-empty">Aucun pointage récent.</td></tr>';
 }
 function renderEmployees(){
   const q=(document.getElementById("employeeSearch").value||"").toLowerCase();
