@@ -49,6 +49,7 @@
         <button class="nav-item" data-section="reports"><span>▥</span> Rapports</button>
         <button class="nav-item" data-section="leaveRequests"><span>▦</span> Congés & absences</button>
         <button class="nav-item" data-section="devices"><span>▣</span> Appareils des agents</button>
+        <button class="nav-item" data-section="security"><span>◈</span> Journal de sécurité</button>
 
         <p class="nav-label">ADMINISTRATION</p>
         <button class="nav-item" data-section="settings"><span>⚙</span> Paramètres</button>
@@ -273,6 +274,20 @@
             <div class="table-wrap"><table><thead><tr><th>Agent</th><th>Appareil</th><th>État</th><th>Demande</th><th>Dernière activité</th><th>Action</th></tr></thead><tbody id="organizationDevicesTable"><tr><td colspan="6" style="text-align:center;padding:24px">Chargement du registre…</td></tr></tbody></table></div>
           </article>
           <article class="panel device-security-note"><strong>Règle de sécurité</strong><p>Un seul téléphone peut être actif par agent. Lorsqu’un nouveau téléphone est approuvé, l’ancien appareil actif est automatiquement révoqué. Le navigateur peut toutefois réinitialiser son identifiant local : ce mécanisme limite les changements non autorisés sans constituer une empreinte matérielle inviolable.</p></article>
+        </section>
+
+        <section class="page-section" id="security">
+          <div class="section-heading"><div><p class="eyebrow">SURVEILLANCE & TRAÇABILITÉ</p><h1>Journal de sécurité</h1><p>Suivez les pointages, les tentatives bloquées et les décisions concernant les téléphones.</p></div><button class="ghost-btn" type="button" onclick="loadSecurityEvents()">↻ Actualiser</button></div>
+          <div class="device-summary-grid">
+            <article class="device-summary-card"><span>Événements critiques</span><strong id="securityHighCount">—</strong></article>
+            <article class="device-summary-card"><span>À surveiller</span><strong id="securityWarningCount">—</strong></article>
+            <article class="device-summary-card"><span>Informations</span><strong id="securityInfoCount">—</strong></article>
+          </div>
+          <article class="panel">
+            <div class="panel-head"><div><h2>Activité récente</h2><p id="securityEventsCaption">Les 100 derniers événements seront affichés.</p></div></div>
+            <div class="table-wrap"><table><thead><tr><th>Date & heure</th><th>Employé</th><th>Événement</th><th>Niveau</th><th>Détail</th></tr></thead><tbody id="securityEventsTable"><tr><td colspan="5" style="text-align:center;padding:24px">Ouvrez le journal pour charger les événements.</td></tr></tbody></table></div>
+          </article>
+          <article class="panel device-security-note"><strong>Ce que le journal enregistre</strong><p>Les arrivées et départs, les tentatives avec QR invalide ou expiré, les tentatives depuis un appareil non autorisé, les pointages supplémentaires bloqués et les décisions d’approbation ou de refus des téléphones. Les refus liés à une session non authentifiée ne peuvent pas tous être enregistrés dans ce journal.</p></article>
         </section>
 
         <section class="page-section" id="settings">
