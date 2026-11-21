@@ -43,23 +43,63 @@ function ppMinutes(value){if(!value||!/^\d{2}:\d{2}$/.test(value))return null;co
 function ppGetSettings(){try{return JSON.parse(localStorage.getItem('presencepro_settings_v1')||'{}')}catch{return {};}}
 function ppAttendanceStatus(arrival){if(!arrival)return 'absent';const cfg=ppGetSettings(),cutoff=ppMinutes(cfg.startTime||'08:00');const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Kinshasa',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(arrival)).map(p=>[p.type,p.value]));const mins=Number(parts.hour)*60+Number(parts.minute);return mins>(cutoff??480)+15?'late':'present';}
 
-function renderDashboardInsights(){
+let dashboardInsightsRequest=0;
+async function renderDashboardInsights(){
+ const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+ const list=document.getElementById('dashboardLateList');
+ const caption=document.getElementById('dashboardInsightsCaption');
+ if(ppSupabase&&ppOrganizationId&&ppSession){
+  const requestId=++dashboardInsightsRequest;
+  try{
+   const parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Kinshasa',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(p=>[p.type,p.value]));
+   const today=parts.year+'-'+parts.month+'-'+parts.day;
+   const endMs=Date.parse(today+'T00:00:00Z');
+   const startDate=new Date(endMs-29*86400000).toISOString().slice(0,10);
+   let rows=[],offset=0;
+   while(true){
+    const {data,error}=await ppSupabase.from('attendance').select('attendance_date,arrival_at,employees!attendance_employee_id_fkey(full_name)').eq('organization_id',ppOrganizationId).gte('attendance_date',startDate).lte('attendance_date',today).order('attendance_date',{ascending:false}).range(offset,offset+499);
+    if(error)throw error;
+    const batch=data||[];rows.push(...batch);
+    if(batch.length<500)break;
+    offset+=500;
+    if(requestId!==dashboardInsightsRequest)return;
+   }
+   if(requestId!==dashboardInsightsRequest)return;
+   const arrivals=rows.filter(r=>r.arrival_at);
+   const lateRows=arrivals.filter(r=>ppAttendanceStatus(r.arrival_at)==='late');
+   const lateByEmployee=new Map();
+   for(const row of lateRows){
+    const name=row.employees?.full_name||'Employé';
+    lateByEmployee.set(name,(lateByEmployee.get(name)||0)+1);
+   }
+   const repeated=[...lateByEmployee.entries()].filter(([,count])=>count>=3).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'fr')).slice(0,5);
+   const rate=arrivals.length?Math.round(lateRows.length/arrivals.length*100):0;
+   set('dashboardThirtyDayArrivals',String(arrivals.length));
+   set('dashboardThirtyDayLateRate',arrivals.length?rate+'%':'—');
+   set('dashboardRepeatedLateCount',String([...lateByEmployee.values()].filter(count=>count>=3).length));
+   if(list)list.innerHTML=repeated.map(([name,count])=>'<tr><td>'+escapeHTML(name)+'</td><td><span class="dashboard-late-pill">'+count+' retards</span></td></tr>').join('')||'<tr><td colspan="2" class="dashboard-empty">Aucun retard récurrent détecté sur les 30 derniers jours.</td></tr>';
+   if(caption)caption.textContent='Analyse du '+ppDateLabel(startDate)+' au '+ppDateLabel(today)+' · '+arrivals.length+' arrivées enregistrées';
+  }catch(error){
+   if(requestId!==dashboardInsightsRequest)return;
+   console.error('Analyse RH du tableau de bord impossible:',error);
+   set('dashboardThirtyDayArrivals','—');set('dashboardThirtyDayLateRate','—');set('dashboardRepeatedLateCount','—');
+   if(list)list.innerHTML='<tr><td colspan="2" class="dashboard-empty">Indicateurs temporairement indisponibles. Réessayez après vérification de la connexion.</td></tr>';
+   if(caption)caption.textContent='Impossible de charger les données des 30 derniers jours.';
+  }
+  return;
+ }
  const arrivals=history.filter(r=>r[2]&&r[2]!=='—');
  const lateRows=arrivals.filter(r=>r[4]==='late');
  const lateByEmployee=new Map();
  lateRows.forEach(r=>lateByEmployee.set(r[1],(lateByEmployee.get(r[1])||0)+1));
  const repeated=[...lateByEmployee.entries()].filter(([,count])=>count>=3).sort((a,b)=>b[1]-a[1]).slice(0,5);
  const rate=arrivals.length?Math.round(lateRows.length/arrivals.length*100):0;
- const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
  set('dashboardThirtyDayArrivals',String(arrivals.length));
  set('dashboardThirtyDayLateRate',arrivals.length?rate+'%':'—');
  set('dashboardRepeatedLateCount',String([...lateByEmployee.values()].filter(count=>count>=3).length));
- const list=document.getElementById('dashboardLateList');
  if(list)list.innerHTML=repeated.map(([name,count])=>'<tr><td>'+escapeHTML(name)+'</td><td><span class="dashboard-late-pill">'+count+' retards</span></td></tr>').join('')||'<tr><td colspan="2" class="dashboard-empty">Aucun retard récurrent détecté sur les pointages chargés.</td></tr>';
- const caption=document.getElementById('dashboardInsightsCaption');
- if(caption)caption.textContent='Analyse des 30 derniers jours · '+arrivals.length+' arrivées enregistrées';
+ if(caption)caption.textContent='Analyse des données de démonstration · '+arrivals.length+' arrivées chargées';
 }
-
 function ppRefreshDashboard(){
   const total=employees.filter(e=>e.active!==false).length;
   const onTime=employees.filter(e=>e.active!==false&&e.status==='present').length;
