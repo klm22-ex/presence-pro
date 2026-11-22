@@ -12,8 +12,18 @@ if(PP_SUPABASE_READY){
 function ppHasSupabase(){return !!ppSupabase;}
 function ppAuthModal(show){const m=document.getElementById('authModal'); if(m)m.classList.toggle('open',show);}
 function ppSetAuthStatus(msg){const el=document.getElementById('authStatus');if(el)el.textContent=msg||'';}
+function ppSetProfileIdentity(fullName,role){
+  const cleanName=(fullName||'Compte administrateur').trim();
+  const name=document.querySelector('.profile-text strong');
+  const roleEl=document.querySelector('.profile-text span');
+  const avatar=document.querySelector('.profile-mini .avatar');
+  if(name)name.textContent=cleanName;
+  const roleLabels={owner:'Propriétaire',admin:'Administrateur',manager:'Responsable',viewer:'Consultation',employee:'Agent'};
+  if(roleEl)roleEl.textContent=roleLabels[role]||'Compte';
+  if(avatar)avatar.textContent=cleanName.split(/\\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase()||'PP';
+}
 function ppSetDemoIdentity(){
-  const name=document.querySelector('.profile-text strong'); if(name)name.textContent='Mode démonstration';
+  ppSetProfileIdentity('Mode démonstration','viewer');
 }
 async function ppLoadOrganization(){
   const {data,error}=await ppSupabase.from('profiles').select('organization_id,full_name,role').eq('id',ppSession.user.id).maybeSingle();
@@ -26,17 +36,22 @@ async function ppLoadOrganization(){
       if(orgErr)throw orgErr;
       localStorage.removeItem('pp_pending_org');
       ppOrganizationId=orgId;
-      const {data:createdProfile,error:profileErr}=await ppSupabase.from('profiles').select('organization_id,role').eq('id',ppSession.user.id).maybeSingle();
+      const {data:createdProfile,error:profileErr}=await ppSupabase.from('profiles').select('organization_id,full_name,role').eq('id',ppSession.user.id).maybeSingle();
       if(profileErr)throw profileErr;
       ppUserRole=createdProfile?.role||null;
       if(createdProfile?.organization_id)ppOrganizationId=createdProfile.organization_id;
+      ppSetProfileIdentity(createdProfile?.full_name||pending.name,ppUserRole);
     }else{
       const {data:emp,error:empErr}=await ppSupabase.from('employees').select('organization_id').eq('auth_user_id',ppSession.user.id).maybeSingle();
       if(empErr)throw empErr;if(emp){ppOrganizationId=emp.organization_id;ppUserRole='employee';}
     }
-  }else{ppOrganizationId=data.organization_id;ppUserRole=data.role||null;}
+  }else{ppOrganizationId=data.organization_id;ppUserRole=data.role||null;ppSetProfileIdentity(data.full_name,ppUserRole);}
 }
-function ppLocalDateISO(date=new Date()){const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,'0'),d=String(date.getDate()).padStart(2,'0');return `${y}-${m}-${d}`;}
+function ppLocalDateISO(date=new Date()){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Kinshasa',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
+  const values=Object.fromEntries(parts.map(part=>[part.type,part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 function ppTime(value){return value?new Date(value).toLocaleTimeString('fr-FR',{timeZone:'Africa/Kinshasa',hour:'2-digit',minute:'2-digit'}):'—';}
 function ppDateLabel(value){return value?new Date(value+'T00:00:00').toLocaleDateString('fr-FR'):'—';}
 function ppMinutes(value){if(!value||!/^\d{2}:\d{2}$/.test(value))return null;const [h,m]=value.split(':').map(Number);return h*60+m;}
