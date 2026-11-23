@@ -420,7 +420,7 @@ async function showEmployeeDetails(employeeId){
     <h3>Informations du profil</h3>
     <label>Nom complet<input id="editEmployeeName" required maxlength="120" value="${escapeHTML(emp.name)}"></label>
     <label>E-mail professionnel<input id="editEmployeeEmail" type="email" required maxlength="254" value="${escapeHTML(emp.email||"")}" placeholder="agent@entreprise.com"></label>
-    <label>Matricule<input id="editEmployeeCode" required maxlength="40" value="${escapeHTML(emp.code)}"></label>
+    <label>Matricule<input id="editEmployeeCode" readonly aria-describedby="employeeCodeHelp" value="${escapeHTML(emp.code)}"></label><small id="employeeCodeHelp">Le matricule est un identifiant permanent et ne peut pas être modifié ici.</small>
     <label>Département<select id="editEmployeeDepartment"><option ${emp.department==='Administration'?'selected':''}>Administration</option><option ${emp.department==='Finance'?'selected':''}>Finance</option><option ${emp.department==='Ressources humaines'?'selected':''}>Ressources humaines</option><option ${emp.department==='Informatique'?'selected':''}>Informatique</option><option ${emp.department==='Enseignement'?'selected':''}>Enseignement</option><option ${emp.department==='Autre'?'selected':''}>Autre</option></select></label>
     <label>Date d’entrée<input id="editEmployeeHireDate" type="date" value="${escapeHTML(emp.hireDate||'')}"></label>
     <label>Date de sortie (facultatif)<input id="editEmployeeExitDate" type="date" value="${escapeHTML(emp.exitDate||'')}"></label>
@@ -446,7 +446,7 @@ async function showEmployeeDetails(employeeId){
     try{
       const realId=emp.supabaseId||((typeof emp.id==='string'&&emp.id.includes('-'))?emp.id:null);
       if(ppSupabase&&ppSession&&ppOrganizationId&&realId){
-        const patch={full_name:name,email,code,department,active,hire_date:hireDate,exit_date:exitDate};
+        const patch={full_name:name,email,department,active,hire_date:hireDate,exit_date:exitDate};
         if(photoFile){
           const optimizedPhoto=await ppCompressEmployeePhoto(photoFile);
           const photoPath=`${ppOrganizationId}/${realId}.jpg`;
