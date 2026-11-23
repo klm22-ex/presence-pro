@@ -20,7 +20,7 @@ function ppSetProfileIdentity(fullName,role){
   if(name)name.textContent=cleanName;
   const roleLabels={owner:'Propriétaire',admin:'Administrateur',manager:'Responsable',viewer:'Consultation',employee:'Agent'};
   if(roleEl)roleEl.textContent=roleLabels[role]||'Compte';
-  if(avatar)avatar.textContent=cleanName.split(/\\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase()||'PP';
+  if(avatar)avatar.textContent=cleanName.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]).join('').toUpperCase()||'PP';
 }
 function ppSetDemoIdentity(){
   ppSetProfileIdentity('Mode démonstration','viewer');
