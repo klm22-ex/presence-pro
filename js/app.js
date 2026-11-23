@@ -25,6 +25,13 @@ function ppSetProfileIdentity(fullName,role){
 function ppSetDemoIdentity(){
   ppSetProfileIdentity('Mode démonstration','viewer');
 }
+function ppCanManageEmployees(){
+  return !ppHasSupabase() || (!!ppSession && ['owner','admin','manager'].includes(ppUserRole));
+}
+function ppApplyRoleUi(){
+  const addButton=document.getElementById('addEmployeeBtn');
+  if(addButton)addButton.hidden=!ppCanManageEmployees();
+}
 async function ppLoadOrganization(){
   const {data,error}=await ppSupabase.from('profiles').select('organization_id,full_name,role').eq('id',ppSession.user.id).maybeSingle();
   if(error)throw error;
@@ -266,7 +273,7 @@ async function ppRefreshHRAlerts(){
 }
 
 async function ppBootCloud(){
-  try{await ppLoadOrganization();await ppLoadEmployees();await ppLoadOrganizationSettings();await loadLeaveRequests();await loadAbsenceJustifications();await loadCompanyCalendar();await ppRefreshHRAlerts();}
+  try{await ppLoadOrganization();ppApplyRoleUi();await ppLoadEmployees();await ppLoadOrganizationSettings();await loadLeaveRequests();await loadAbsenceJustifications();await loadCompanyCalendar();await ppRefreshHRAlerts();}
   catch(err){console.error(err);showToast('Connexion Supabase : '+(err.message||'erreur'));}
 }
 const employees = [
@@ -427,11 +434,17 @@ async function showEmployeeDetails(employeeId){
     <label>Remplacer la photo (facultatif)<input id="editEmployeePhoto" type="file" accept="image/*"></label>
     <label class="employee-active-toggle"><input id="editEmployeeActive" type="checkbox" ${emp.active===false?'':'checked'}> Employé actif</label>
     <div class="employee-detail-grid"><div><small>Statut du jour</small><strong>${escapeHTML(labels[emp.status]||emp.status||"Non renseigné")}</strong></div><div><small>Dernier pointage</small><strong>${escapeHTML(emp.time||"—")}</strong></div><div><small>Compte agent</small><strong>${emp.accountLinked?"Associé":"Non associé"}</strong></div></div>
-    <button class="primary-btn full" type="submit">Enregistrer les modifications</button><p class="employee-edit-note">Les changements seront enregistrés dans Supabase si vous êtes connecté comme administrateur.</p>
+    <button class="primary-btn full" type="submit">Enregistrer les modifications</button><p class="employee-edit-note">Les changements sont réservés aux administrateurs et responsables autorisés.</p>
   </form><div id="employeeDeviceRequests" class="employee-detail-history"><h3>Appareils des agents</h3><p class="detail-loading">Chargement des demandes…</p></div><div class="employee-detail-history"><h3>Historique récent</h3><p class="detail-loading">Chargement de l’historique…</p></div>`;
   const editForm=body.querySelector('#editEmployeeForm');
+  if(!ppCanManageEmployees()){
+    editForm.querySelectorAll('input,select,button').forEach(control=>control.disabled=true);
+    const save=editForm.querySelector('button[type="submit"]');if(save)save.hidden=true;
+    const note=editForm.querySelector('.employee-edit-note');if(note)note.textContent='Mode consultation : vous pouvez consulter ce dossier, mais pas le modifier.';
+  }
   editForm.addEventListener('submit',async event=>{
     event.preventDefault();
+    if(!ppCanManageEmployees()){showToast('Votre rôle ne permet pas de modifier les employés.');return;}
     const saveButton=editForm.querySelector('button[type="submit"]');saveButton.disabled=true;saveButton.textContent='Enregistrement…';
     const name=document.getElementById('editEmployeeName').value.trim();
     const email=document.getElementById('editEmployeeEmail').value.trim().toLowerCase();
@@ -847,7 +860,7 @@ const closeEmployeeDetails=document.getElementById("closeEmployeeDetails");
 if(closeEmployeeDetails)closeEmployeeDetails.addEventListener("click",()=>employeeDetailsModal?.classList.remove("open"));
 if(employeeDetailsModal)employeeDetailsModal.addEventListener("click",e=>{if(e.target===employeeDetailsModal)employeeDetailsModal.classList.remove("open");});
 const modal=document.getElementById("employeeModal");
-document.getElementById("addEmployeeBtn").addEventListener("click",()=>{document.getElementById("newCode").value=ppNextEmployeeMatricule();modal.classList.add("open");});
+document.getElementById("addEmployeeBtn").addEventListener("click",()=>{if(!ppCanManageEmployees()){showToast('Votre rôle ne permet pas d’ajouter des employés.');return;}document.getElementById("newCode").value=ppNextEmployeeMatricule();modal.classList.add("open");});
 document.getElementById("closeModal").addEventListener("click",()=>modal.classList.remove("open"));
 modal.addEventListener("click",e=>{if(e.target===modal)modal.classList.remove("open")});
 function ppNextEmployeeMatricule(){
@@ -858,6 +871,7 @@ function ppNextEmployeeMatricule(){
 }
 document.getElementById("employeeForm").addEventListener("submit",async e=>{
   e.preventDefault();
+  if(!ppCanManageEmployees()){showToast('Votre rôle ne permet pas d’ajouter des employés.');return;}
   const name=document.getElementById("newName").value.trim();
   const email=document.getElementById("newEmail").value.trim().toLowerCase();
   const code=ppNextEmployeeMatricule();
