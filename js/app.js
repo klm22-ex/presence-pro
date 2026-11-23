@@ -244,7 +244,7 @@ async function ppLoadBiometricCredentials(){
 async function ppInit(){
   if(!ppHasSupabase()){ppSetDemoIdentity();return;}
   const {data}=await ppSupabase.auth.getSession();ppSession=data.session;employeePortalUser=data.session?.user||null;
-  ppSupabase.auth.onAuthStateChange((_event,session)=>{ppSession=session;employeePortalUser=session?.user||null;if(!session){ppUserRole=null;ppOrganizationId=null;}});
+  ppSupabase.auth.onAuthStateChange((_event,session)=>{ppSession=session;employeePortalUser=session?.user||null;if(!session){ppUserRole=null;ppOrganizationId=null;}ppApplyRoleUi();});
   if(!ppSession){return;}
   await ppBootCloud();
 }
