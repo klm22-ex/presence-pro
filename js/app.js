@@ -139,16 +139,25 @@ function ppRefreshDashboard(){
   renderDashboardInsights();
   renderReports();
 }
+async function ppFetchAllRows(buildQuery,pageSize=500){
+  const rows=[];
+  for(let offset=0;;offset+=pageSize){
+    const {data,error}=await buildQuery().range(offset,offset+pageSize-1);
+    if(error)throw error;
+    const batch=data||[];
+    rows.push(...batch);
+    if(batch.length<pageSize)break;
+  }
+  return rows;
+}
 async function ppLoadEmployees(){
   if(!ppSupabase||!ppOrganizationId)return;
   const today=ppLocalDateISO();
   const since=new Date();since.setDate(since.getDate()-30);const sinceISO=ppLocalDateISO(since);
-  const [{data:emps,error:e1},{data:att,error:e2}]=await Promise.all([
-    ppSupabase.from('employees').select('*').eq('organization_id',ppOrganizationId).order('created_at',{ascending:true}),
-    ppSupabase.from('attendance').select('*').eq('organization_id',ppOrganizationId).gte('attendance_date',sinceISO).lte('attendance_date',today).order('attendance_date',{ascending:false}).order('created_at',{ascending:false})
+  const [employeeRows,attendanceRows]=await Promise.all([
+    ppFetchAllRows(()=>ppSupabase.from('employees').select('*').eq('organization_id',ppOrganizationId).order('created_at',{ascending:true}).order('id',{ascending:true})),
+    ppFetchAllRows(()=>ppSupabase.from('attendance').select('*').eq('organization_id',ppOrganizationId).gte('attendance_date',sinceISO).lte('attendance_date',today).order('attendance_date',{ascending:false}).order('created_at',{ascending:false}).order('id',{ascending:true}))
   ]);
-  if(e1)throw e1;if(e2)throw e2;
-  const employeeRows=emps||[],attendanceRows=att||[];
   const employeeMap=new Map(employeeRows.map(e=>[e.id,e]));
   const todayAttendance=new Map();
   for(const row of attendanceRows){
