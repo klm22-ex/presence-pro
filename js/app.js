@@ -28,9 +28,19 @@ function ppSetDemoIdentity(){
 function ppCanManageEmployees(){
   return !ppHasSupabase() || (!!ppSession && ['owner','admin','manager'].includes(ppUserRole));
 }
+function ppCanReviewHR(){
+  return !ppHasSupabase() || (!!ppSession && ['owner','admin','manager'].includes(ppUserRole));
+}
+function ppCanManageOrganizationSettings(){
+  return !ppHasSupabase() || (!!ppSession && ['owner','admin'].includes(ppUserRole));
+}
 function ppApplyRoleUi(){
   const addButton=document.getElementById('addEmployeeBtn');
   if(addButton)addButton.hidden=!ppCanManageEmployees();
+  const settingsNav=document.querySelector('[data-section="settings"]');
+  if(settingsNav)settingsNav.hidden=!ppCanManageOrganizationSettings();
+  const calendarForm=document.getElementById('companyCalendarForm');
+  if(calendarForm)calendarForm.hidden=!ppCanReviewHR();
 }
 async function ppLoadOrganization(){
   const {data,error}=await ppSupabase.from('profiles').select('organization_id,full_name,role').eq('id',ppSession.user.id).maybeSingle();
@@ -649,17 +659,19 @@ async function loadCompanyCalendar(){
  const body=document.getElementById('companyCalendarTable');if(!body)return;
  if(!ppSupabase||!ppSession||!ppOrganizationId){body.innerHTML='<tr><td colspan="4">Connectez-vous comme responsable.</td></tr>';return;}
  try{const {data,error}=await ppSupabase.from('company_calendar_days').select('id,calendar_date,label,day_type,source').eq('organization_id',ppOrganizationId).order('calendar_date',{ascending:true}).limit(300);if(error)throw error;
- body.innerHTML=(data||[]).map(d=>'<tr><td>'+escapeHTML(ppDateLabel(d.calendar_date))+'</td><td>'+escapeHTML(d.label)+'</td><td>'+escapeHTML(d.day_type==='holiday'?'Jour férié':d.day_type==='working_exception'?'Jour travaillé exceptionnel':'Jour non travaillé')+'</td><td>'+escapeHTML(d.source==='national_law'?'Jours légaux RDC':'Entreprise')+'</td><td><button class="ghost-btn" type="button" onclick="deleteCompanyCalendarDay(\''+d.id+'\')">Supprimer</button></td></tr>').join('')||'<tr><td colspan="5">Aucun jour particulier.</td></tr>';
+ const canManageCalendar=ppCanReviewHR();
+ body.innerHTML=(data||[]).map(d=>'<tr><td>'+escapeHTML(ppDateLabel(d.calendar_date))+'</td><td>'+escapeHTML(d.label)+'</td><td>'+escapeHTML(d.day_type==='holiday'?'Jour férié':d.day_type==='working_exception'?'Jour travaillé exceptionnel':'Jour non travaillé')+'</td><td>'+escapeHTML(d.source==='national_law'?'Jours légaux RDC':'Entreprise')+'</td><td>'+(canManageCalendar?'<button class="ghost-btn" type="button" onclick="deleteCompanyCalendarDay(\''+d.id+'\')">Supprimer</button>':'Lecture seule')+'</td></tr>').join('')||'<tr><td colspan="5">Aucun jour particulier.</td></tr>';
  }catch(e){console.error(e);body.innerHTML='<tr><td colspan="4">Calendrier indisponible. Vérifiez les permissions.</td></tr>';}
 }
 document.getElementById('companyCalendarForm')?.addEventListener('submit',async e=>{
- e.preventDefault();if(!ppSupabase||!ppSession||!ppOrganizationId){showToast('Connectez-vous comme administrateur.');return;}
+ e.preventDefault();if(!ppSupabase||!ppSession||!ppOrganizationId){showToast('Connectez-vous comme administrateur.');return;}if(!ppCanReviewHR()){showToast('Votre rôle ne permet pas de modifier le calendrier.');return;}
  const calendar_date=document.getElementById('calendarDate').value,label=document.getElementById('calendarLabel').value.trim(),day_type=document.getElementById('calendarType').value;
  if(!calendar_date||label.length<2){showToast('Indiquez une date et un libellé valide.');return;}
  try{const {error}=await ppSupabase.from('company_calendar_days').upsert({organization_id:ppOrganizationId,calendar_date,label,day_type,source:'company',created_by:ppSession.user.id},{onConflict:'organization_id,calendar_date'});if(error)throw error;e.target.reset();await loadCompanyCalendar();await loadReportSummaryFromServer(reportRequestId);showToast('Jour ajouté au calendrier.');}
  catch(err){console.error(err);showToast('Enregistrement impossible : '+(err.message||'permissions insuffisantes.'));}
 });
 async function deleteCompanyCalendarDay(id){
+ if(!ppCanReviewHR()){showToast('Votre rôle ne permet pas de modifier le calendrier.');return;}
  if(!confirm('Supprimer ce jour du calendrier ?'))return;
  try{const {error}=await ppSupabase.from('company_calendar_days').delete().eq('id',id);if(error)throw error;await loadCompanyCalendar();await loadReportSummaryFromServer(reportRequestId);showToast('Jour supprimé.');}
  catch(err){console.error(err);showToast('Suppression impossible : vérifiez les droits.');}
@@ -1016,11 +1028,14 @@ async function loadAbsenceJustifications(){
     if(ids.length){const {data:emps,error:ee}=await ppSupabase.from('employees').select('id,full_name').in('id',ids);if(ee)throw ee;(emps||[]).forEach(e=>names[e.id]=e.full_name);}
     const paths=(data||[]).filter(r=>r.attachment_path).map(r=>r.attachment_path),signed=new Map();
     if(paths.length){const {data:urls,error:urlError}=await ppSupabase.storage.from('absence-justifications').createSignedUrls(paths,300);if(urlError)throw urlError;(urls||[]).forEach(x=>{if(x.path&&x.signedUrl)signed.set(x.path,x.signedUrl);});}
-    body.innerHTML=(data||[]).map(r=>'<tr><td>'+escapeHTML(names[r.employee_id]||'Employé')+'</td><td>'+escapeHTML(ppDateLabel(r.absence_date))+'</td><td>'+escapeHTML(r.reason)+'</td><td>'+(r.attachment_path&&signed.has(r.attachment_path)?'<a href="'+escapeHTML(signed.get(r.attachment_path))+'" target="_blank" rel="noopener">Ouvrir</a>':'—')+'</td><td><span class="leave-status '+escapeHTML(r.status)+'">'+(r.status==='pending'?'En attente':r.status==='approved'?'Acceptée':'Refusée')+'</span></td><td>'+escapeHTML(ppDateLabel(r.created_at))+'</td><td>'+(r.status==='pending'?'<button class="ghost-btn" onclick="decideAbsenceJustification(\''+r.id+'\',\'approved\')">Accepter</button> <button class="ghost-btn" onclick="decideAbsenceJustification(\''+r.id+'\',\'rejected\')">Refuser</button>':'—')+'</td></tr>').join('')||'<tr><td colspan="7" style="text-align:center;padding:22px">Aucune justification reçue.</td></tr>';
+    const canReview=ppCanReviewHR();
+    body.innerHTML=(data||[]).map(r=>'<tr><td>'+escapeHTML(names[r.employee_id]||'Employé')+'</td><td>'+escapeHTML(ppDateLabel(r.absence_date))+'</td><td>'+escapeHTML(r.reason)+'</td><td>'+(r.attachment_path&&signed.has(r.attachment_path)?'<a href="'+escapeHTML(signed.get(r.attachment_path))+'" target="_blank" rel="noopener">Ouvrir</a>':'—')+'</td><td><span class="leave-status '+escapeHTML(r.status)+'">'+(r.status==='pending'?'En attente':r.status==='approved'?'Acceptée':'Refusée')+'</span></td><td>'+escapeHTML(ppDateLabel(r.created_at))+'</td><td>'+(r.status==='pending'?(canReview?'<button class="ghost-btn" onclick="decideAbsenceJustification(\''+r.id+'\',\'approved\')">Accepter</button> <button class="ghost-btn" onclick="decideAbsenceJustification(\''+r.id+'\',\'rejected\')">Refuser</button>':'Décision réservée au responsable'):'—')+'</td></tr>').join('')||'<tr><td colspan="7" style="text-align:center;padding:22px">Aucune justification reçue.</td></tr>';
   }catch(err){console.error(err);body.innerHTML='<tr><td colspan="7" style="text-align:center;padding:22px">Impossible de charger les justifications. Vérifiez les droits d’accès.</td></tr>';}
 }
 async function decideAbsenceJustification(id,status){
   if(!ppSupabase||!ppSession)return;
+  if(!ppCanReviewHR()){showToast('Votre rôle ne permet pas de valider les justifications.');return;}
+  if(!['approved','rejected'].includes(status))return;
   try{
     const {error}=await ppSupabase.from('absence_justifications').update({status,reviewed_by:ppSession.user.id,reviewed_at:new Date().toISOString()}).eq('id',id).eq('status','pending');
     if(error)throw error;
@@ -1035,10 +1050,11 @@ async function loadLeaveRequests(){
   if(!ppSupabase||!ppSession||!ppOrganizationId){body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px">Connectez-vous à un compte administrateur relié à une organisation.</td></tr>';return;}
   try{const {data,error}=await ppSupabase.from('leave_requests').select('id,employee_id,request_type,start_date,end_date,reason,status,created_at').order('created_at',{ascending:false}).limit(100);if(error)throw error;const pendingCount=(data||[]).filter(r=>r.status==='pending').length;const nc=document.getElementById('notificationsCount');if(nc){nc.textContent=pendingCount;nc.hidden=pendingCount===0;}
     const ids=[...new Set((data||[]).map(r=>r.employee_id))];let names={};if(ids.length){const {data:emps,error:ee}=await ppSupabase.from('employees').select('id,full_name').in('id',ids);if(ee)throw ee;(emps||[]).forEach(e=>names[e.id]=e.full_name);}
-    body.innerHTML=(data||[]).map(r=>`<tr><td>${escapeHTML(names[r.employee_id]||'Employé')}</td><td>${escapeHTML(r.request_type)}</td><td>${escapeHTML(r.start_date)} → ${escapeHTML(r.end_date)}</td><td>${escapeHTML(r.reason)}</td><td><span class="leave-status ${escapeHTML(r.status)}">${r.status==='pending'?'En attente':r.status==='approved'?'Approuvée':'Refusée'}</span></td><td>${r.status==='pending'?`<button class="ghost-btn" onclick="decideLeaveRequest('${r.id}','approved')">Approuver</button> <button class="ghost-btn" onclick="decideLeaveRequest('${r.id}','rejected')">Refuser</button>`:'—'}</td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px">Aucune demande.</td></tr>';
+    const canReview=ppCanReviewHR();
+    body.innerHTML=(data||[]).map(r=>`<tr><td>${escapeHTML(names[r.employee_id]||'Employé')}</td><td>${escapeHTML(r.request_type)}</td><td>${escapeHTML(r.start_date)} → ${escapeHTML(r.end_date)}</td><td>${escapeHTML(r.reason)}</td><td><span class="leave-status ${escapeHTML(r.status)}">${r.status==='pending'?'En attente':r.status==='approved'?'Approuvée':'Refusée'}</span></td><td>${r.status==='pending'?(canReview?`<button class="ghost-btn" onclick="decideLeaveRequest('${r.id}','approved')">Approuver</button> <button class="ghost-btn" onclick="decideLeaveRequest('${r.id}','rejected')">Refuser</button>`:'Décision réservée au responsable'):'—'}</td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px">Aucune demande.</td></tr>';
   }catch(err){body.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px">Impossible de charger les demandes. Vérifiez que la migration SQL V15 a été exécutée.</td></tr>';}
 }
-async function decideLeaveRequest(id,status){if(!ppSupabase||!ppSession)return;try{const {error}=await ppSupabase.from('leave_requests').update({status,reviewed_by:ppSession.user.id,reviewed_at:new Date().toISOString()}).eq('id',id).eq('status','pending');if(error)throw error;showToast(status==='approved'?'Demande approuvée.':'Demande refusée.');await loadLeaveRequests();await ppRefreshHRAlerts();renderReports();}catch(err){showToast('Décision impossible : vérifiez les permissions de votre compte.');}}
+async function decideLeaveRequest(id,status){if(!ppSupabase||!ppSession)return;if(!ppCanReviewHR()){showToast('Votre rôle ne permet pas de valider les congés.');return;}if(!['approved','rejected'].includes(status))return;try{const {error}=await ppSupabase.from('leave_requests').update({status,reviewed_by:ppSession.user.id,reviewed_at:new Date().toISOString()}).eq('id',id).eq('status','pending');if(error)throw error;showToast(status==='approved'?'Demande approuvée.':'Demande refusée.');await loadLeaveRequests();await ppRefreshHRAlerts();renderReports();}catch(err){showToast('Décision impossible : vérifiez les permissions de votre compte.');}}
 document.getElementById('leaveRequestForm')?.addEventListener('submit',submitLeaveRequest);
 
 async function ppLoadOrganizationSettings(){
@@ -1062,6 +1078,7 @@ function refreshSettingsUI(){
   document.querySelectorAll('input[name="workingDay"]').forEach(input=>{input.checked=Array.isArray(cfg.workingDays)&&cfg.workingDays.includes(Number(input.value));});
 }
 function openSettingsModal(tab='organization'){
+  if(!ppCanManageOrganizationSettings()){showToast('Les paramètres sont réservés au propriétaire et aux administrateurs.');return;}
   refreshSettingsUI();const modal=document.getElementById('settingsModal');if(!modal)return;
   document.querySelectorAll('[data-settings-panel]').forEach(panel=>panel.hidden=panel.dataset.settingsPanel!==tab);
   document.querySelectorAll('[data-settings-tab]').forEach(btn=>btn.classList.toggle('active',btn.dataset.settingsTab===tab));
@@ -1073,7 +1090,7 @@ document.querySelectorAll('[data-settings-tab]').forEach(btn=>btn.addEventListen
 document.getElementById('closeSettingsModal')?.addEventListener('click',closeSettingsModal);
 document.getElementById('settingsModal')?.addEventListener('click',e=>{if(e.target.id==='settingsModal')closeSettingsModal();});
 document.getElementById('settingsOrganizationForm')?.addEventListener('submit',async e=>{
-  e.preventDefault();const name=document.getElementById('settingsOrganizationName').value.trim();if(!name)return;
+  e.preventDefault();if(!ppCanManageOrganizationSettings()){showToast('Votre rôle ne permet pas de modifier l’organisation.');return;}const name=document.getElementById('settingsOrganizationName').value.trim();if(!name)return;
   const cfg=readAppSettings();cfg.organizationName=name;
   if(ppSupabase&&ppSession&&ppOrganizationId){
     const {error}=await ppSupabase.from('organizations').update({name}).eq('id',ppOrganizationId);
@@ -1083,7 +1100,7 @@ document.getElementById('settingsOrganizationForm')?.addEventListener('submit',a
   localStorage.setItem(PP_SETTINGS_KEY,JSON.stringify(cfg));refreshSettingsUI();showToast('Nom de l’organisation enregistré.');closeSettingsModal();
 });
 document.getElementById('settingsHoursForm')?.addEventListener('submit',async e=>{
-  e.preventDefault();const start=document.getElementById('settingsStartTime').value,end=document.getElementById('settingsEndTime').value;
+  e.preventDefault();if(!ppCanManageOrganizationSettings()){showToast('Votre rôle ne permet pas de modifier les horaires.');return;}const start=document.getElementById('settingsStartTime').value,end=document.getElementById('settingsEndTime').value;
   if(!start||!end||start>=end){showToast('Choisissez une heure de début antérieure à l’heure de fin.');return;}
   const workingDays=[...document.querySelectorAll('input[name="workingDay"]:checked')].map(input=>Number(input.value)).sort((a,b)=>a-b);
   if(!workingDays.length){showToast('Sélectionnez au moins un jour habituel de travail.');return;}
