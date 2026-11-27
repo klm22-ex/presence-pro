@@ -244,7 +244,27 @@ async function ppLoadBiometricCredentials(){
 async function ppInit(){
   if(!ppHasSupabase()){ppSetDemoIdentity();return;}
   const {data}=await ppSupabase.auth.getSession();ppSession=data.session;employeePortalUser=data.session?.user||null;
-  ppSupabase.auth.onAuthStateChange((_event,session)=>{ppSession=session;employeePortalUser=session?.user||null;if(!session){ppUserRole=null;ppOrganizationId=null;}ppApplyRoleUi();});
+  ppSupabase.auth.onAuthStateChange((_event,session)=>{
+    const hadSession=!!ppSession;
+    ppSession=session;
+    employeePortalUser=session?.user||null;
+    if(!session){
+      ppUserRole=null;
+      ppOrganizationId=null;
+      if(hadSession){
+        employees.length=0;
+        history.splice(0,history.length);
+        const adminModalOpen=document.getElementById('authModal')?.classList.contains('open');
+        const employeeModalOpen=document.getElementById('employeeAccessModal')?.classList.contains('open');
+        const shell=document.getElementById('appShell');
+        const privateWorkspaceOpen=!!shell&&(shell.classList.contains('mode-admin')||shell.classList.contains('mode-agent'));
+        if(privateWorkspaceOpen&&!adminModalOpen&&!employeeModalOpen)backToHome();
+        const profile=document.getElementById('agentProfileCard');
+        if(profile)profile.innerHTML='<div class="agent-profile-empty">Session fermée. Reconnectez-vous pour consulter vos informations.</div>';
+      }
+    }
+    ppApplyRoleUi();
+  });
   if(!ppSession){return;}
   await ppBootCloud();
 }
