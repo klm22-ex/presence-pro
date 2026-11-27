@@ -261,6 +261,15 @@ async function ppInit(){
         if(privateWorkspaceOpen&&!adminModalOpen&&!employeeModalOpen)backToHome();
         const profile=document.getElementById('agentProfileCard');
         if(profile)profile.innerHTML='<div class="agent-profile-empty">Session fermée. Reconnectez-vous pour consulter vos informations.</div>';
+        const resetPrivateView=(id,html)=>{const element=document.getElementById(id);if(element)element.innerHTML=html;};
+        resetPrivateView('employeeIdentity','<div class="person-avatar">?</div><div><strong>Non connecté</strong><small>Connectez votre compte employé.</small></div>');
+        resetPrivateView('agentAccessActions','<button class="primary-btn" type="button" onclick="openEmployeeAccess(\'create\')">＋ Créer mon compte</button><button class="secondary-btn" type="button" onclick="openEmployeeAccess(\'login\')">🔑 Se connecter</button>');
+        resetPrivateView('agentHistoryTable','<tr><td colspan="4" style="text-align:center;padding:28px;color:#738196">Connectez votre compte employé pour voir votre historique.</td></tr>');
+        resetPrivateView('myLeaveRequests','');
+        resetPrivateView('myAbsenceJustifications','');
+        resetPrivateView('agentLastAttendance','Connectez votre compte employé pour afficher vos pointages.');
+        resetPrivateView('kioskResult','');
+        if(typeof qrScanner!=='undefined'&&qrScanner){qrScanner.stop().catch(()=>{});qrScanner=null;}
       }
     }
     ppApplyRoleUi();
